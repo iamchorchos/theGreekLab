@@ -485,7 +485,7 @@ The Peizer-Pratt transform is:
 ```math
 h_2(x,N)
 = \frac{1}{2}
-+ \frac{\operatorname{sign}(x)}{2}
++ \frac{\mathrm{sign}(x)}{2}
 \sqrt{
 1-\exp\left(
 -\left(\frac{x}{N+1/3+0.1/(N+1)}\right)^2
@@ -632,7 +632,7 @@ n(x) = \frac{1}{\sqrt{2\pi}}e^{-x^2/2}
 The standard normal CDF is:
 
 ```math
-N(x) = \frac{1}{2}\left(1+\operatorname{erf}\left(\frac{x}{\sqrt{2}}\right)\right)
+N(x) = \frac{1}{2}\left(1+\mathrm{erf}\left(\frac{x}{\sqrt{2}}\right)\right)
 ```
 
 The ERF implementation uses numerical approximations and explicit handling for
