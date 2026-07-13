@@ -24,7 +24,7 @@ class CoxRossRubensteinTest {
     private static final double SECONDS_IN_YEAR = 365.0 * 86_400.0;
 
     @Test
-    void rejectsNearZeroVolatility() {
+    void rejectsLowVolatility() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -36,7 +36,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void rejectsNaNVolatility() {
+    void rejectsNaN() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -48,7 +48,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void rejectsEuropeanContracts() {
+    void rejectsEuropean() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -60,7 +60,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void rejectsInvalidRiskNeutralProbability() {
+    void rejectsInvalidProbability() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 5.0, 0.0);
@@ -72,7 +72,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void nonDividendAmericanCallConvergesToBlackScholesMertonCall() {
+    void callConverges() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract americanCall = contract(now, Option.AMERICAN, OptionType.CALL);
         OptionContract europeanCall = contract(now, Option.EUROPEAN, OptionType.CALL);
@@ -85,7 +85,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void americanPutIsAtLeastEuropeanPut() {
+    void putDominatesEuropean() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract americanPut = contract(now, Option.AMERICAN, OptionType.PUT);
         OptionContract europeanPut = contract(now, Option.EUROPEAN, OptionType.PUT);
@@ -98,7 +98,7 @@ class CoxRossRubensteinTest {
     }
 
     @Test
-    void increasingStepsImprovesNonDividendCallConvergence() {
+    void stepsImproveConvergence() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract americanCall = contract(now, Option.AMERICAN, OptionType.CALL);
         OptionContract europeanCall = contract(now, Option.EUROPEAN, OptionType.CALL);

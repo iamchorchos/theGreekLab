@@ -25,9 +25,9 @@ class LeisenReimerTest {
     private static final double SECONDS_IN_YEAR = 365.0 * 86_400.0;
 
     @Test
-    void rejectsNaNVolatility() {
+    void rejectsNaN() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
+        OptionContract contract = contract(now, Option.AMERICAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertThrows(
@@ -37,9 +37,9 @@ class LeisenReimerTest {
     }
 
     @Test
-    void rejectsEvenStepCount() {
+    void rejectsEvenSteps() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
+        OptionContract contract = contract(now, Option.AMERICAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertThrows(
@@ -49,9 +49,9 @@ class LeisenReimerTest {
     }
 
     @Test
-    void rejectsFuturesFrame() {
+    void rejectsFutures() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = contract(now, Option.AMERICAN, OptionType.CALL);
+        OptionContract contract = contract(now, Option.AMERICAN);
         FuturesFrame frame = new FuturesFrame(now, 100.0, 0.05);
 
         assertThrows(
@@ -61,9 +61,9 @@ class LeisenReimerTest {
     }
 
     @Test
-    void rejectsEuropeanContracts() {
+    void rejectsEuropean() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = contract(now, Option.EUROPEAN, OptionType.CALL);
+        OptionContract contract = contract(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertThrows(
@@ -73,10 +73,10 @@ class LeisenReimerTest {
     }
 
     @Test
-    void nonDividendAmericanCallConvergesToBlackScholesMertonCall() {
+    void callConverges() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract americanCall = contract(now, Option.AMERICAN, OptionType.CALL);
-        OptionContract europeanCall = contract(now, Option.EUROPEAN, OptionType.CALL);
+        OptionContract americanCall = contract(now, Option.AMERICAN);
+        OptionContract europeanCall = contract(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         double leisenReimerPrice = new LeisenReimer(americanCall, frame, 0.2, 101).price();
@@ -85,11 +85,11 @@ class LeisenReimerTest {
         assertEquals(blackScholesPrice, leisenReimerPrice, 0.02);
     }
 
-    private static OptionContract contract(ZonedDateTime now, Option option, OptionType type) {
+    private static OptionContract contract(ZonedDateTime now, Option option) {
         ZonedDateTime expiry = now.plusNanos((long) (SECONDS_IN_YEAR * 1_000_000_000L));
         return new OptionContract(
                 "TEST",
-                type,
+                OptionType.CALL,
                 option,
                 100.0,
                 expiry,

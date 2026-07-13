@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OptionContractTest {
 
     @Test
-    void convenienceConstructorDerivesEpochNanosSafely() {
+    void derivesEpochNanos() {
         ZonedDateTime expiry = ZonedDateTime.of(2027, 1, 15, 16, 0, 0, 123_456_789, ZoneOffset.UTC);
 
         OptionContract contract = new OptionContract(
@@ -43,7 +43,7 @@ class OptionContractTest {
     }
 
     @Test
-    void rejectsNullExpirationInConvenienceConstructor() {
+    void rejectsNullExpiration() {
         assertThrows(
                 InvalidDateException.class,
                 () -> new OptionContract("AAPL", OptionType.CALL, Option.EUROPEAN, 100.0, null, 100)
@@ -51,7 +51,7 @@ class OptionContractTest {
     }
 
     @Test
-    void rejectsInvalidStrikeAndMultiplier() {
+    void rejectsInvalidTerms() {
         ZonedDateTime expiry = ZonedDateTime.now(ZoneOffset.UTC).plusYears(1);
 
         assertThrows(
@@ -65,7 +65,7 @@ class OptionContractTest {
     }
 
     @Test
-    void rejectsInvalidSecondsInExpirationYear() {
+    void rejectsYearSeconds() {
         ZonedDateTime expiry = ZonedDateTime.now(ZoneOffset.UTC).plusYears(1);
 
         assertThrows(
@@ -84,7 +84,7 @@ class OptionContractTest {
     }
 
     @Test
-    void timeToExpiryFloorsAtZeroAfterExpiration() {
+    void floorsExpiryAtZero() {
         ZonedDateTime expiry = ZonedDateTime.now(ZoneOffset.UTC);
         long expiryNanos = MarketData.toEpochNanos(expiry);
         OptionContract contract = new OptionContract(
@@ -102,7 +102,7 @@ class OptionContractTest {
     }
 
     @Test
-    void withStrikePreservesExpirationMetadata() {
+    void preservesExpiryMetadata() {
         ZonedDateTime expiry = ZonedDateTime.now(ZoneOffset.UTC).plusYears(1);
         long expiryNanos = MarketData.toEpochNanos(expiry);
         OptionContract contract = new OptionContract(

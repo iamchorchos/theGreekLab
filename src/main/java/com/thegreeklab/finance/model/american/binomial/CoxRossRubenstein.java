@@ -6,6 +6,7 @@ import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
+import com.thegreeklab.finance.validation.PricingValidation;
 import net.jafama.FastMath;
 
 /**
@@ -37,10 +38,7 @@ public final class CoxRossRubenstein extends BinomialModel {
      */
     public CoxRossRubenstein(OptionContract contract, MarketData frame, double volatility, int steps) {
         super(contract, frame, steps);
-        if (!Double.isFinite(volatility) || volatility < EPSILON) {
-            throw new InvalidVolatilityException("Volatility must be strictly positive and finite. Received: " + volatility);
-        }
-
+        PricingValidation.requireValidVolatility(volatility);
         this.u = FastMath.exp(volatility * FastMath.sqrt(this.dt));
         this.d = 1.0 / this.u;
         this.p = (FastMath.exp(this.costOfCarry * this.dt) - this.d) / (this.u - this.d);

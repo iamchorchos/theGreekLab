@@ -19,7 +19,7 @@ class Black76Test {
     private static final double TOLERANCE = 1e-12;
 
     @Test
-    void rhoComesOnlyFromDiscountFactorWhenFuturesPriceIsInput() {
+    void rhoUsesDiscountOnly() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         double tYears = 1.25;
         long nanosToExpiry = (long) (tYears * 365.0 * 86_400.0 * 1_000_000_000L);
@@ -59,7 +59,7 @@ class Black76Test {
     }
 
     @Test
-    void epsilonIsNotDefinedForFuturesOptions() {
+    void epsilonUndefined() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = new OptionContract(
                 "FUT",

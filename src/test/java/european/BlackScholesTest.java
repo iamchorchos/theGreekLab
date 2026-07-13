@@ -42,7 +42,7 @@ class BlackScholesInvariantsTest {
      */
     @ParameterizedTest(name = "[{index}] S: {0}, K: {1}, T: {2}")
     @CsvFileSource(resources = "/invariants_test_cases.csv", numLinesToSkip = 1)
-    void shouldSatisfyMathInvariants(ArgumentsAccessor args) {
+    void invariants(ArgumentsAccessor args) {
 
         double S = args.getDouble(0);
         double K = args.getDouble(1);

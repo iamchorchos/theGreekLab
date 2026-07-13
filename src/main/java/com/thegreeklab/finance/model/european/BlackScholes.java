@@ -7,6 +7,7 @@ import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.model.greeks.Greeks;
+import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.ERF;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.jafama.FastMath;
@@ -44,6 +45,7 @@ import java.util.Objects;
  * @see GarmanKohlhagen
  * @see BlackScholesMerton
  */
+@SuppressWarnings("deprecation")
 public sealed abstract class BlackScholes implements Greeks permits BlackScholesMerton, BSInternal, Black76, GarmanKohlhagen {
     private final double stockPrice;
     private final double strikePrice;
@@ -67,7 +69,6 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     private final double pdfD1;
     private final double pdfD2;
     private final double invVolSqrtT;
-    private static final double EPSILON = 1e-6;
 
     /**
      * Constructs a priced option instance, eagerly computing {@code d1}, {@code d2}
@@ -89,7 +90,7 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     public BlackScholes(OptionContract contract, MarketData frame, double volatility) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
-        validateVolatility(volatility);
+        PricingValidation.requireValidVolatility(volatility);
         validateEuropeanContract(contract);
 
         this.b = frame.costOfCarry();
@@ -160,19 +161,81 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     public static double price(OptionContract contract, MarketData frame, double volatility) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
-        validateVolatility(volatility);
+        PricingValidation.requireValidVolatility(volatility);
         validateEuropeanContract(contract);
 
         double t = contract.getTimeToExpiry(frame.timestampNanos());
+        return computePrice(
+                contract.type(),
+                frame.spotPrice(),
+                contract.strikePrice(),
+                t,
+                frame.riskFreeRate(),
+                frame.costOfCarry(),
+                volatility
+        );
+    }
+
+    /**
+     * Prices a European call directly from generalized Black-Scholes inputs.
+     *
+     * <p>This overload is intended for pricing algorithms which already operate
+     * on transformed model parameters and therefore cannot faithfully reconstruct
+     * an asset-specific {@link MarketData} instance. One example is the put-call
+     * transformation used by the Bjerksund-Stensland approximation.</p>
+     *
+     * @param spotPrice    current underlying or futures price
+     * @param strikePrice  option strike price
+     * @param timeToExpiry time to expiry in years; must not be negative
+     * @param riskFreeRate continuously compounded discount rate
+     * @param costOfCarry  generalized cost-of-carry parameter {@code b}
+     * @param volatility   annualized volatility as a decimal
+     * @return generalized European call value, or intrinsic value at expiry
+     */
+    public static double callPrice(
+            double spotPrice,
+            double strikePrice,
+            double timeToExpiry,
+            double riskFreeRate,
+            double costOfCarry,
+            double volatility
+    ) {
+        validateFormulaInputs(
+                spotPrice,
+                strikePrice,
+                timeToExpiry,
+                riskFreeRate,
+                costOfCarry,
+                volatility
+        );
+        return computePrice(
+                OptionType.CALL,
+                spotPrice,
+                strikePrice,
+                timeToExpiry,
+                riskFreeRate,
+                costOfCarry,
+                volatility
+        );
+    }
+
+    private static double computePrice(
+            OptionType type,
+            double s,
+            double k,
+            double t,
+            double r,
+            double b,
+            double volatility
+    ) {
+        Objects.requireNonNull(type, "Option type cannot be null.");
 
         if (t <= 0.0) {
-            return contract.type() == OptionType.CALL ? FastMath.max(frame.spotPrice() - contract.strikePrice(), 0.0) : FastMath.max(contract.strikePrice() - frame.spotPrice(), 0.0);
+            return switch (type) {
+                case CALL -> FastMath.max(s - k, 0.0);
+                case PUT -> FastMath.max(k - s, 0.0);
+            };
         }
-
-        double s = frame.spotPrice();
-        double k = contract.strikePrice();
-        double r = frame.riskFreeRate();
-        double b = frame.costOfCarry();
 
         double volSq = volatility * volatility;
         double sqrtT = FastMath.sqrt(t);
@@ -186,11 +249,33 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
         double cdfD1 = ERF.cdf(d1);
         double cdfD2 = ERF.cdf(d2);
 
-        if (contract.type() == OptionType.CALL) {
-            return computeCallPrice(s, k, df, qf, cdfD1, cdfD2);
-        } else {
-            return computePutPrice(s, k, df, qf, cdfD1, cdfD2);
+        return switch (type) {
+            case CALL -> computeCallPrice(s, k, df, qf, cdfD1, cdfD2);
+            case PUT -> computePutPrice(s, k, df, qf, cdfD1, cdfD2);
+        };
+    }
+
+    private static void validateFormulaInputs(
+            double spotPrice,
+            double strikePrice,
+            double timeToExpiry,
+            double riskFreeRate,
+            double costOfCarry,
+            double volatility
+    ) {
+        if (!(spotPrice > 0.0) || !Double.isFinite(spotPrice)) {
+            throw new IllegalArgumentException("Spot price must be strictly positive and finite.");
         }
+        if (!(strikePrice > 0.0) || !Double.isFinite(strikePrice)) {
+            throw new IllegalArgumentException("Strike price must be strictly positive and finite.");
+        }
+        if (timeToExpiry < 0.0 || !Double.isFinite(timeToExpiry)) {
+            throw new IllegalArgumentException("Time to expiry must be non-negative and finite.");
+        }
+        if (!Double.isFinite(riskFreeRate) || !Double.isFinite(costOfCarry)) {
+            throw new IllegalArgumentException("Risk-free rate and cost of carry must be finite.");
+        }
+        PricingValidation.requireValidVolatility(volatility);
     }
 
     /**
@@ -274,11 +359,6 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
         return computeCallPrice(s, k, df, qf, cdfD1, cdfD2) - s * qf + k * df;
     }
 
-    private static void validateVolatility(double volatility) {
-        if (!Double.isFinite(volatility) || volatility < EPSILON) {
-            throw new InvalidVolatilityException("Volatility must be strictly positive and finite. Received: " + volatility);
-        }
-    }
 
     private static void validateEuropeanContract(OptionContract contract) {
         if (contract.option() != Option.EUROPEAN) {

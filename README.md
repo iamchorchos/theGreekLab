@@ -2,20 +2,20 @@
 
 ![TheGreekLab banner](docs/banner.png)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/iamchorchos/TheGreekLab/ci.yml?branch=main&label=CI&logo=github)](https://github.com/iamchorchos/TheGreekLab/actions/workflows/ci.yml)
-![Java](https://img.shields.io/badge/Java-21-blue)
+[![CI](https://img.shields.io/github/actions/workflow/status/iamchorchos/thegreeklab/ci.yml?branch=main&label=CI&logo=github)](https://github.com/iamchorchos/thegreeklab/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-22-blue)
 ![Maven](https://img.shields.io/badge/Build-Maven-C71A36)
 ![JUnit](https://img.shields.io/badge/Tests-JUnit%205-25A162)
-![Code Quality](https://img.shields.io/badge/Code%20Quality-SpotBugs%20%2B%20Qodana-6B57FF)
-![License](https://img.shields.io/badge/License-MIT-green)
-[![Download ZIP](https://img.shields.io/badge/Download-ZIP-2EA44F)](https://github.com/iamchorchos/TheGreekLab/archive/refs/heads/main.zip)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/44b8c5d347b14242968b22e35d706416)](https://app.codacy.com/gh/iamchorchos/theGreekLab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+![License](https://img.shields.io/badge/License-MIT%20%2B%20GPL--2.0%2B-blue)
+[![Download ZIP](https://img.shields.io/badge/Download-ZIP-2EA44F)](https://github.com/iamchorchos/thegreeklab/archive/refs/heads/main.zip)
 
 ![Project Type](https://img.shields.io/badge/Project-Java%20Library-0F766E)
 ![Domain](https://img.shields.io/badge/Domain-Quant%20Finance-1D4ED8)
-![Models](https://img.shields.io/badge/Models-Black--Scholes%20%7C%20Black--76%20%7C%20CRR%20%7C%20LR-7C3AED)
+![Models](https://img.shields.io/badge/Models-BSM%20%7C%20Black--76%20%7C%20CRR%20%7C%20LR%20%7C%20BS2002-7C3AED)
+![Native](https://img.shields.io/badge/Native-Java%20Panama%20%2B%20Fortran-2563EB)
 ![Greeks](https://img.shields.io/badge/Greeks-Analytical%20%2B%20Binomial-B45309)
 ![Maven Wrapper](https://img.shields.io/badge/Maven%20Wrapper-Included-2EA44F)
-![Status](https://img.shields.io/badge/Status-Portfolio%20Ready-111827)
 
 TheGreekLab is a Java quantitative finance library for option pricing, Greeks,
 volatility estimation and model cross-validation.
@@ -32,6 +32,10 @@ numerical tests for vanilla European and American option models.
 - American option pricing:
   - Cox-Ross-Rubenstein binomial tree
   - Leisen-Reimer binomial tree
+  - Bjerksund-Stensland 2002 closed-form approximation
+- Native numerical integration:
+  - bivariate normal CDF through the Java Foreign Function and Memory API
+  - original Fortran `pbivnorm` routine
 - Greeks:
   - price
   - delta, gamma, vega, theta, rho
@@ -51,11 +55,28 @@ numerical tests for vanilla European and American option models.
 
 ## Requirements
 
-- Java 21+
+- Java 22+
 - Maven, or the included Maven wrapper
+- Native `pbivnorm` library for the current platform when using
+  Bjerksund-Stensland 2002
 
 The project includes Maven wrapper scripts, so a global Maven installation is
 not required.
+
+A Windows x86-64 `pbivnorm.dll` is bundled with the project. GitHub Actions
+builds the Linux x86-64 library from `src/main/fortran/pbivnorm.f` before
+running Maven. Other platforms can supply an external library through:
+
+```text
+-Dthegreeklab.pbivnorm.path=/absolute/path/to/library
+```
+
+or the `THEGREEKLAB_PBIVNORM_PATH` environment variable. Applications using
+the native CDF should enable native access for the unnamed module:
+
+```text
+--enable-native-access=ALL-UNNAMED
+```
 
 ## Running Tests
 
@@ -74,14 +95,25 @@ Linux/macOS:
 The full test suite contains large numerical datasets, so it may take longer
 than a small unit-test-only project.
 
+To run all verification checks and generate the JaCoCo coverage report:
+
+```bash
+./mvnw verify
+```
+
+The local HTML report is written to `target/site/jacoco/index.html`. The build
+requires at least 85% line coverage and 65% branch coverage. CI also archives
+the complete report and uploads `jacoco.xml` to Codacy.
+
 ## Code Quality
 
 The project is configured with:
 
-- Maven Compiler Plugin with Java 21 release target
+- Maven Compiler Plugin with Java 22 release target
 - JUnit 5 test suite
+- JaCoCo XML and HTML coverage reports
 - SpotBugs during `mvn verify`
-- Qodana configuration in `qodana.yaml`
+- Codacy coverage and quality monitoring
 - GitHub Actions CI in `.github/workflows/ci.yml`
 
 The project itself should be treated primarily as a library.
@@ -144,10 +176,15 @@ src/main/java/com/thegreeklab
   finance/exception/          domain-specific exceptions
   finance/frame/              market-data frames
   finance/model/american/     American option models
+    approximations/           Bjerksund-Stensland 2002
+    binomial/                 CRR and Leisen-Reimer trees
   finance/model/european/     European option models
   finance/model/greeks/       Greeks interface
   finance/numerical/          numerical utilities
-  math/                       volatility, ERF, Peizer-Pratt inversion
+  math/                       volatility, distributions and numerical helpers
+
+src/main/fortran              native pbivnorm source
+src/main/resources/native     bundled platform libraries
 
 src/test/java                 unit and cross-validation tests
 src/test/resources            numerical reference datasets
@@ -158,6 +195,7 @@ src/test/resources            numerical reference datasets
 - The library separates contract data from market data.
 - European models accept only European contracts.
 - American binomial models accept only American contracts.
+- Bjerksund-Stensland accepts American contracts and returns price only.
 - Market-data frames encode the model-specific cost of carry:
   - `EquityFrame`: `b = r - q`
   - `FuturesFrame`: `b = 0`
@@ -179,7 +217,25 @@ The test suite covers:
 - ERF and normal CDF accuracy
 - Peizer-Pratt inversion
 - American binomial model behavior
+- all 36 Bjerksund-Stensland 2002 values from Haug table 3-2
+- bivariate normal identities and perfect-correlation limits
+- Bjerksund-Stensland expiry, no-arbitrage bounds and numerical fallback
 - CRR price cross-validation against generated reference data
+
+## Licensing
+
+TheGreekLab uses component-specific licensing:
+
+- original Java code, tests and documentation: [MIT](LICENSES/MIT.txt),
+- `pbivnorm.f` and native binaries compiled from it:
+  [GPL-2.0-or-later](LICENSES/GPL-2.0.txt),
+- distributions combining the Java and native components:
+  [GPL-3.0-or-later](LICENSES/GPL-3.0.txt).
+
+The MIT license continues to apply independently to the original Java files.
+The native provenance and author attribution are recorded in [NOTICE](NOTICE).
+License texts and the notice are also included in built JAR files under
+`META-INF`.
 
 ## Status
 
@@ -188,5 +244,3 @@ portfolio presentation in quantitative finance software engineering.
 
 It is not financial advice and should not be used for live trading or risk
 management without independent validation.
-# TheGreekLab
-

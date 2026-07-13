@@ -19,7 +19,7 @@ class GarmanKohlhagenTest {
     private static final double BUMP_TOLERANCE = 1e-5;
 
     @Test
-    void satisfiesFxPutCallParity() {
+    void putCallParity() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         double tYears = 0.75;
         double spot = 1.085;
@@ -42,7 +42,7 @@ class GarmanKohlhagenTest {
     }
 
     @Test
-    void rhoAndEpsilonMatchDomesticAndForeignRateBumps() {
+    void rateGreeksMatchBumps() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         double tYears = 1.5;
         double spot = 1.085;

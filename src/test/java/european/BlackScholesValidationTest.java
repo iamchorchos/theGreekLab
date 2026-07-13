@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BlackScholesValidationTest {
 
     @Test
-    void constructorRejectsNonFiniteVolatility() {
+    void constructorRejectsNonFinite() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -35,7 +35,7 @@ class BlackScholesValidationTest {
     }
 
     @Test
-    void staticPriceRejectsNonFiniteVolatility() {
+    void priceRejectsNonFinite() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -51,7 +51,7 @@ class BlackScholesValidationTest {
     }
 
     @Test
-    void staticPriceRejectsNonEuropeanContracts() {
+    void priceRejectsAmerican() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.AMERICAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -63,7 +63,7 @@ class BlackScholesValidationTest {
     }
 
     @Test
-    void constructorRejectsNonEuropeanContracts() {
+    void constructorRejectsAmerican() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now, Option.AMERICAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
@@ -75,7 +75,7 @@ class BlackScholesValidationTest {
     }
 
     @Test
-    void equityEpsilonRemainsDefined() {
+    void equityEpsilonDefined() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.01);

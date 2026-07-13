@@ -8,6 +8,7 @@ import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.exception.UnsupportedFrameTypeException;
 import com.thegreeklab.finance.frame.FuturesFrame;
 import com.thegreeklab.finance.frame.MarketData;
+import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.PeizerPrattInversion;
 import net.jafama.FastMath;
 
@@ -21,10 +22,6 @@ import net.jafama.FastMath;
 public final class LeisenReimer extends BinomialModel {
 
     private final double volatility;
-    private final double d1;
-    private final double d2;
-    private final double pPrime;
-    private final double t;
 
 
     /**
@@ -46,29 +43,31 @@ public final class LeisenReimer extends BinomialModel {
      */
     public LeisenReimer(OptionContract contract, MarketData frame, double volatility, int steps) {
         super(contract, frame, steps);
-        if (frame instanceof FuturesFrame) throw new UnsupportedFrameTypeException("FuturesFrame is not supported for Leisen-Reimer.");
-        if (!Double.isFinite(volatility) || volatility < EPSILON) {
-            throw new InvalidVolatilityException("Volatility must be strictly positive and finite. Received: " + volatility);
-        }
+        if (frame instanceof FuturesFrame)
+            throw new UnsupportedFrameTypeException("FuturesFrame is not supported for Leisen-Reimer.");
+        PricingValidation.requireValidVolatility(volatility);
         if ((steps & 1) == 0) throw new InvalidStepCountException("Steps must be odd.");
 
         this.volatility = volatility;
-        this.t = this.dt * this.steps;
-        this.d1 = (FastMath.log(this.s / this.k) + (this.costOfCarry + 0.5 * this.volatility * this.volatility) * this.t) / (this.volatility * FastMath.sqrt(this.t));
-        this.d2 = this.d1 - this.volatility * FastMath.sqrt(this.t);
+        double timeToExpiry = this.dt * this.steps;
+        double sqrtTimeToExpiry = FastMath.sqrt(timeToExpiry);
+        double d1 = (FastMath.log(this.s / this.k)
+                + (this.costOfCarry + 0.5 * this.volatility * this.volatility) * timeToExpiry)
+                / (this.volatility * sqrtTimeToExpiry);
+        double d2 = d1 - this.volatility * sqrtTimeToExpiry;
         this.p = PeizerPrattInversion.inverseFunction(d2, steps);
-        this.pPrime = PeizerPrattInversion.inverseFunction(d1, steps);
+        double pPrime = PeizerPrattInversion.inverseFunction(d1, steps);
         this.u = FastMath.exp(this.costOfCarry * this.dt) * (pPrime / p);
         this.d = FastMath.exp(this.costOfCarry * this.dt) * ((1 - pPrime) / (1 - p));
-        validateTreeParameters();
+        validateTreeParameters(pPrime);
     }
 
-    private void validateTreeParameters() {
-        if (!isStrictProbability(this.p)) {
+    private void validateTreeParameters(double pPrime) {
+        if (isInvalidProbability(this.p)) {
             throw new MathException("Leisen-Reimer probability p must be finite and between 0 and 1. Received: " + this.p);
         }
-        if (!isStrictProbability(this.pPrime)) {
-            throw new MathException("Leisen-Reimer probability pPrime must be finite and between 0 and 1. Received: " + this.pPrime);
+        if (isInvalidProbability(pPrime)) {
+            throw new MathException("Leisen-Reimer probability pPrime must be finite and between 0 and 1. Received: " + pPrime);
         }
         if (!(this.u > 0.0) || !Double.isFinite(this.u)) {
             throw new MathException("Leisen-Reimer up factor must be strictly positive and finite. Received: " + this.u);
@@ -78,8 +77,8 @@ public final class LeisenReimer extends BinomialModel {
         }
     }
 
-    private static boolean isStrictProbability(double value) {
-        return value > 0.0 && value < 1.0 && Double.isFinite(value);
+    private static boolean isInvalidProbability(double value) {
+        return value <= 0.0 || value >= 1.0 || !Double.isFinite(value);
     }
 
     @Override

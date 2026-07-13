@@ -1,8 +1,8 @@
 # TheGreekLab Usage Guide
 
 This guide shows the main public API paths for TheGreekLab: contract creation,
-market data frames, European models, American binomial models, Greeks and
-volatility utilities.
+market data frames, European models, American models, Greeks, native numerical
+integration and volatility utilities.
 
 ## Core Concepts
 
@@ -255,6 +255,105 @@ double vega = model.vega();
 double rho = model.rho();
 ```
 
+## Bjerksund-Stensland 2002 American Option
+
+`BjerksundStensland` is a closed-form approximation for vanilla American
+options. It supports every `MarketData` implementation through the generalized
+cost-of-carry parameter and returns the option price. American puts are handled
+internally through put-call symmetry.
+
+```java
+import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.enums.Option;
+import com.thegreeklab.finance.enums.OptionType;
+import com.thegreeklab.finance.frame.EquityFrame;
+import com.thegreeklab.finance.model.american.approximations.BjerksundStensland;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+
+ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+ZonedDateTime expiry = now.plusMonths(6);
+
+OptionContract put = new OptionContract(
+        "AAPL",
+        OptionType.PUT,
+        Option.AMERICAN,
+        210.0,
+        expiry,
+        100
+);
+
+EquityFrame frame = new EquityFrame(
+        now,
+        205.35,
+        0.045,
+        0.005
+);
+
+BjerksundStensland model = new BjerksundStensland(put, frame, 0.22);
+
+double price = model.price();
+```
+
+The approximation enforces the European and intrinsic-value lower bounds. If
+the analytical exercise boundary becomes non-finite, it returns that
+no-arbitrage lower bound instead of propagating `NaN`.
+
+## Native pbivnorm Configuration
+
+Bjerksund-Stensland 2002 uses `BivariateNormal.cdf()`. The Java implementation
+calls the Fortran `pbivnorm` routine through the Java Foreign Function and
+Memory API.
+
+The CDF can also be used directly:
+
+```java
+import com.thegreeklab.math.BivariateNormal;
+
+double probability = BivariateNormal.cdf(0.25, -0.50, 0.60);
+```
+
+Windows x86-64 uses the bundled library:
+
+```text
+src/main/resources/native/windows-x86_64/pbivnorm.dll
+```
+
+On Linux x86-64, build the library before running the application or tests:
+
+```bash
+mkdir -p src/main/resources/native/linux-x86_64
+gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
+  src/main/fortran/pbivnorm.f \
+  -o src/main/resources/native/linux-x86_64/libpbivnorm.so
+```
+
+An external library can be selected with a JVM property:
+
+```bash
+java --enable-native-access=ALL-UNNAMED \
+  -Dthegreeklab.pbivnorm.path=/absolute/path/to/libpbivnorm.so \
+  -jar application.jar
+```
+
+or with an environment variable:
+
+```text
+THEGREEKLAB_PBIVNORM_PATH=/absolute/path/to/library
+```
+
+The external file must export either `pbivnorm_` (the usual GNU Fortran name)
+or `pbivnorm`. macOS and ARM64 currently require an external build because no
+matching binary is bundled.
+
+### Native component license
+
+The Java component is licensed under MIT. The Fortran source and native
+libraries are licensed under GPL-2.0-or-later. A distribution combining both
+components is provided under GPL-3.0-or-later. See the repository `LICENSE`,
+`NOTICE` and `LICENSES` directory for the complete terms and attribution.
+
 ## Historical Volatility
 
 ```java
@@ -319,7 +418,7 @@ EquityFrame frame = new EquityFrame(
 
 double marketPrice = 8.50;
 
-OptionalDouble impliedVolatility =
+var impliedVolatility =
         VolatilityCalculator.impliedVolatility(contract, frame, marketPrice);
 ```
 

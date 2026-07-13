@@ -14,7 +14,7 @@ class ERFTest {
 
     @ParameterizedTest(name = "Validation row {index}: x={0}")
     @CsvFileSource(resources = "/erf_crossval.csv", numLinesToSkip = 1)
-    void validate(double x, double expectedErfc, double expectedCdf, double expectedPdf) {
+    void matchesReference(double x, double expectedErfc, double expectedCdf, double expectedPdf) {
 
         assertEquals(expectedErfc, ERF.erfc(x), TOLERANCE,
                 () -> String.format("ERFC mismatch at x = %s", x));
@@ -27,7 +27,7 @@ class ERFTest {
     }
 
     @Test
-    void handlesSpecialValues() {
+    void specialValues() {
         assertEquals(0.0, ERF.erfc(Double.POSITIVE_INFINITY), 0.0);
         assertEquals(2.0, ERF.erfc(Double.NEGATIVE_INFINITY), 0.0);
         assertTrue(Double.isNaN(ERF.erfc(Double.NaN)));
@@ -42,7 +42,7 @@ class ERFTest {
     }
 
     @Test
-    void handlesCentralValues() {
+    void centralValues() {
         assertEquals(1.0, ERF.erfc(0.0), TOLERANCE);
         assertEquals(1.0, ERF.erfc(-0.0), TOLERANCE);
         assertEquals(0.5, ERF.cdf(0.0), TOLERANCE);
@@ -50,7 +50,7 @@ class ERFTest {
     }
 
     @Test
-    void handlesRegionBoundaries() {
+    void regionBoundaries() {
         assertTrue(Double.isFinite(ERF.erfc(0.46875)));
         assertTrue(Double.isFinite(ERF.erfc(-0.46875)));
         assertTrue(Double.isFinite(ERF.erfc(4.0)));

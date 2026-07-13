@@ -26,8 +26,8 @@ class ImpliedVolatilityTest {
     private static final double TOLERANCE = 1e-8;
 
     @ParameterizedTest
-    @CsvFileSource(resources = "/iv_crossval.csv", numLinesToSkip = 1, maxCharsPerColumn = 4096)
-    void validate(String assetClass, String flag, double spot, double strike, double t,
+    @CsvFileSource(resources = "/iv_crossval.csv", numLinesToSkip = 1)
+    void recoversVolatility(String assetClass, String flag, double spot, double strike, double t,
                   double rateOrDomestic, double divOrForeign, double marketPrice, double expectedIv) {
 
         long nowNanos = System.currentTimeMillis() * 1_000_000L;
@@ -62,7 +62,7 @@ class ImpliedVolatilityTest {
     }
 
     @Test
-    void rejectsAmericanContracts() {
+    void rejectsAmerican() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = new OptionContract(
                 "TEST",
@@ -81,7 +81,7 @@ class ImpliedVolatilityTest {
     }
 
     @Test
-    void rejectsNonFiniteMarketPrice() {
+    void rejectsNonFinitePrice() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = new OptionContract(
                 "TEST",

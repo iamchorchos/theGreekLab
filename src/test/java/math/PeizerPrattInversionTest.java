@@ -12,7 +12,7 @@ class PeizerPrattInversionTest {
 
     @ParameterizedTest(name = "Row {index}: x={0}, steps={1}")
     @CsvFileSource(resources = "/peizer_pratt_crossval.csv", numLinesToSkip = 1)
-    void validateMethod2TransformAgainstHighPrecisionReference(double x, int steps, double expectedProbability) {
+    void matchesReference(double x, int steps, double expectedProbability) {
 
         double actualProb = PeizerPrattInversion.inverseFunction(x, steps);
 

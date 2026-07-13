@@ -20,7 +20,7 @@ class ParkinsonsVolatilityTest {
 
     @ParameterizedTest
     @CsvFileSource(resources = "/parkinson_crossval.csv", numLinesToSkip = 1, maxCharsPerColumn = 50000)
-    void validate(String highsStr, String lowsStr, int tradingDays, double expectedVol) {
+    void matchesReference(String highsStr, String lowsStr, int tradingDays, double expectedVol) {
 
         double[] highs = Arrays.stream(highsStr.split(";"))
                 .mapToDouble(Double::parseDouble)
@@ -40,7 +40,7 @@ class ParkinsonsVolatilityTest {
     }
 
     @Test
-    void rejectsNullBarList() {
+    void rejectsNullBars() {
         assertThrows(
                 LackingDataException.class,
                 () -> VolatilityCalculator.parkinsonsVolatility(null, 252)
@@ -48,7 +48,7 @@ class ParkinsonsVolatilityTest {
     }
 
     @Test
-    void rejectsInvalidTradingDays() {
+    void rejectsTradingDays() {
         List<VolatilityCalculator.PriceBar> bars = List.of(
                 new VolatilityCalculator.PriceBar(101.0, 99.0),
                 new VolatilityCalculator.PriceBar(102.0, 98.0)
@@ -61,7 +61,7 @@ class ParkinsonsVolatilityTest {
     }
 
     @Test
-    void rejectsNonFinitePriceBars() {
+    void rejectsNonFinite() {
         assertThrows(
                 VolatilityException.class,
                 () -> new VolatilityCalculator.PriceBar(Double.NaN, 99.0)
@@ -69,7 +69,7 @@ class ParkinsonsVolatilityTest {
     }
 
     @Test
-    void rejectsNullBarEntries() {
+    void rejectsNullEntries() {
         List<VolatilityCalculator.PriceBar> bars = Arrays.asList(
                 new VolatilityCalculator.PriceBar(101.0, 99.0),
                 null

@@ -23,7 +23,7 @@ class BinomialGreeksTest {
     private static final double SECONDS_IN_YEAR = 365.0 * 86_400.0;
 
     @Test
-    void crrGreeksHaveExpectedVanillaSigns() {
+    void crrSigns() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
@@ -34,7 +34,7 @@ class BinomialGreeksTest {
     }
 
     @Test
-    void leisenReimerGreeksHaveExpectedVanillaSigns() {
+    void leisenReimerSigns() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
@@ -45,7 +45,7 @@ class BinomialGreeksTest {
     }
 
     @Test
-    void crrRejectsTooFewStepsForTreeBasedGreeks() {
+    void crrRejectsFewSteps() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 

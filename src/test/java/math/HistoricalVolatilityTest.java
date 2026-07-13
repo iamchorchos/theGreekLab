@@ -20,7 +20,7 @@ class HistoricalVolatilityTest {
 
     @ParameterizedTest
     @CsvFileSource(resources = "/volatility_crossval.csv", numLinesToSkip = 1, maxCharsPerColumn = 20000)
-    void validate(String pricesStr, int tradingDays, double expectedVol) {
+    void matchesReference(String pricesStr, int tradingDays, double expectedVol) {
 
         double[] pricesArray = Arrays.stream(pricesStr.split(";"))
                 .mapToDouble(Double::parseDouble)
@@ -34,7 +34,7 @@ class HistoricalVolatilityTest {
     }
 
     @Test
-    void rejectsNullPriceListWithDomainException() {
+    void rejectsNullPrices() {
         assertThrows(
                 LackingDataException.class,
                 () -> VolatilityCalculator.historicalVolatility(null, 252)
@@ -42,7 +42,7 @@ class HistoricalVolatilityTest {
     }
 
     @Test
-    void rejectsInvalidTradingDays() {
+    void rejectsTradingDays() {
         DoubleList prices = new DoubleArrayList(100.0, 101.0, 102.0);
 
         assertThrows(
@@ -52,7 +52,7 @@ class HistoricalVolatilityTest {
     }
 
     @Test
-    void rejectsNonFinitePrices() {
+    void rejectsNonFinite() {
         DoubleList prices = new DoubleArrayList(100.0, Double.NaN, 102.0);
 
         assertThrows(

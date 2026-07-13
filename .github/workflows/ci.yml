@@ -19,11 +19,32 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 22
           cache: maven
 
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Build native pbivnorm library
+        run: |
+          mkdir -p src/main/resources/native/linux-x86_64
+          gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
+            src/main/fortran/pbivnorm.f \
+            -o src/main/resources/native/linux-x86_64/libpbivnorm.so
+
       - name: Verify
         run: ./mvnw verify
+
+      - name: Archive JaCoCo report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+          if-no-files-found: error
+
+      - name: Upload coverage to Codacy
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: target/site/jacoco/jacoco.xml

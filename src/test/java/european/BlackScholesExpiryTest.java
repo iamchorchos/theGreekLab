@@ -18,9 +18,9 @@ class BlackScholesExpiryTest {
     private static final double TOLERANCE = 1e-12;
 
     @Test
-    void expiredInTheMoneyCallUsesIntrinsicValueAndPayoffDelta() {
+    void itmCallAtExpiry() {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.CALL, 100.0, expiry);
+        OptionContract contract = contract(OptionType.CALL, expiry);
         EquityFrame frame = new EquityFrame(expiry, 110.0, 0.05, 0.0);
 
         BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
@@ -34,9 +34,9 @@ class BlackScholesExpiryTest {
     }
 
     @Test
-    void expiredOutOfTheMoneyCallHasZeroValueAndZeroDelta() {
+    void otmCallAtExpiry() {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.CALL, 100.0, expiry);
+        OptionContract contract = contract(OptionType.CALL, expiry);
         EquityFrame frame = new EquityFrame(expiry, 90.0, 0.05, 0.0);
 
         BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
@@ -49,9 +49,9 @@ class BlackScholesExpiryTest {
     }
 
     @Test
-    void expiredInTheMoneyPutUsesIntrinsicValueAndPayoffDelta() {
+    void itmPutAtExpiry() {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.PUT, 100.0, expiry);
+        OptionContract contract = contract(OptionType.PUT, expiry);
         EquityFrame frame = new EquityFrame(expiry, 90.0, 0.05, 0.0);
 
         BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
@@ -64,12 +64,12 @@ class BlackScholesExpiryTest {
     }
 
     @Test
-    void expiredAtTheMoneyOptionsUseSymmetricPayoffDelta() {
+    void atmAtExpiry() {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(expiry, 100.0, 0.05, 0.0);
 
-        BlackScholesMerton call = new BlackScholesMerton(contract(OptionType.CALL, 100.0, expiry), frame, 0.2);
-        BlackScholesMerton put = new BlackScholesMerton(contract(OptionType.PUT, 100.0, expiry), frame, 0.2);
+        BlackScholesMerton call = new BlackScholesMerton(contract(OptionType.CALL, expiry), frame, 0.2);
+        BlackScholesMerton put = new BlackScholesMerton(contract(OptionType.PUT, expiry), frame, 0.2);
 
         assertAll(
                 () -> assertEquals(0.0, call.price(), TOLERANCE),
@@ -100,12 +100,12 @@ class BlackScholesExpiryTest {
         );
     }
 
-    private static OptionContract contract(OptionType type, double strike, ZonedDateTime expiry) {
+    private static OptionContract contract(OptionType type, ZonedDateTime expiry) {
         return new OptionContract(
                 "TEST",
                 type,
                 Option.EUROPEAN,
-                strike,
+                100.0,
                 expiry,
                 100
         );

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class MarketDataFrameTest {
 
     @Test
-    void equityFrameComputesCostOfCarryAndBumpsFields() {
+    void equityFrame() {
         EquityFrame frame = new EquityFrame(123L, 100.0, 0.05, 0.02);
 
         EquityFrame rateBumped = frame.withRiskFreeRate(0.06);
@@ -36,7 +36,7 @@ class MarketDataFrameTest {
     }
 
     @Test
-    void fxFrameComputesCostOfCarryAndUsesDomesticRateAsRiskFreeRate() {
+    void fxFrame() {
         FXFrame frame = new FXFrame(123L, 1.10, 0.05, 0.03);
 
         FXFrame rateBumped = frame.withRiskFreeRate(0.06);
@@ -50,7 +50,7 @@ class MarketDataFrameTest {
     }
 
     @Test
-    void futuresFrameUsesFuturesPriceAsSpotAndHasZeroCostOfCarry() {
+    void futuresFrame() {
         FuturesFrame frame = new FuturesFrame(123L, 2500.0, 0.04);
 
         FuturesFrame rateBumped = frame.withRiskFreeRate(0.05);
@@ -65,7 +65,7 @@ class MarketDataFrameTest {
     }
 
     @Test
-    void framesRejectInvalidPricesAndRates() {
+    void rejectsInvalidData() {
         assertAll(
                 () -> assertThrows(NonPositivePriceException.class, () -> new EquityFrame(1L, 0.0, 0.05, 0.01)),
                 () -> assertThrows(NonPositivePriceException.class, () -> new FXFrame(1L, Double.NaN, 0.05, 0.01)),
@@ -77,7 +77,7 @@ class MarketDataFrameTest {
     }
 
     @Test
-    void convertsZonedDateTimeToEpochNanos() {
+    void convertsTimestamp() {
         ZonedDateTime timestamp = ZonedDateTime.of(2026, 7, 11, 12, 30, 15, 123_456_789, ZoneOffset.UTC);
 
         long expected = timestamp.toInstant().getEpochSecond() * 1_000_000_000L + timestamp.getNano();
@@ -86,7 +86,7 @@ class MarketDataFrameTest {
     }
 
     @Test
-    void rejectsNullTimestampConversion() {
+    void rejectsNullTimestamp() {
         assertThrows(InvalidDateException.class, () -> MarketData.toEpochNanos(null));
     }
 }

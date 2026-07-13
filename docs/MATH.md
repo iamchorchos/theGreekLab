@@ -417,6 +417,221 @@ Put:
 \text{Parmicharma}_P = (r-b)^2D_b + \text{Parmicharma}_C
 ```
 
+## Bjerksund-Stensland 2002
+
+The Bjerksund-Stensland 2002 model is a closed-form approximation for vanilla
+American options. The implementation follows the generalized cost-of-carry
+notation used by Haug.
+
+The approximation is evaluated directly for calls. Puts use put-call symmetry:
+
+```math
+P_{BS2002}(S,K,T,r,b,\sigma)
+=
+C_{BS2002}(K,S,T,r-b,-b,\sigma)
+```
+
+If the transformed call has $b \ge r$, early exercise is not optimal and its
+value is the generalized European call value.
+
+### Exercise boundaries
+
+The intermediate time is:
+
+```math
+t_1 = \frac{\sqrt{5}-1}{2}T
+```
+
+The positive root used by the approximation is:
+
+```math
+\beta =
+\frac{1}{2}-\frac{b}{\sigma^2}
++
+\sqrt{
+\left(\frac{b}{\sigma^2}-\frac{1}{2}\right)^2
++\frac{2r}{\sigma^2}
+}
+```
+
+The asymptotic and lower exercise boundaries are:
+
+```math
+B_\infty = \frac{\beta}{\beta-1}K
+```
+
+```math
+B_0 = \max\left(K,\frac{r}{r-b}K\right)
+```
+
+For a time $t$:
+
+```math
+h(t) =
+-\left(bt+2\sigma\sqrt{t}\right)
+\frac{K^2}{(B_\infty-B_0)B_0}
+```
+
+```math
+I(t) = B_0+(B_\infty-B_0)\left(1-e^{h(t)}\right)
+```
+
+The two boundaries and their coefficients are:
+
+```math
+I_1=I(t_1), \qquad I_2=I(T)
+```
+
+```math
+\alpha_j=(I_j-K)I_j^{-\beta}, \qquad j\in\{1,2\}
+```
+
+### Phi term
+
+For exponent $\gamma$:
+
+```math
+\lambda =
+-r+\gamma b+\frac{1}{2}\gamma(\gamma-1)\sigma^2
+```
+
+```math
+\kappa = \frac{2b}{\sigma^2}+2\gamma-1
+```
+
+```math
+d =
+-\frac{
+\ln(S/H)+\left(b+(\gamma-1/2)\sigma^2\right)t
+}{\sigma\sqrt{t}}
+```
+
+```math
+\phi(S,t,\gamma,H,I)
+=
+e^{\lambda t}S^\gamma
+\left[
+N(d)
+-
+\left(\frac{I}{S}\right)^\kappa
+N\left(d-\frac{2\ln(I/S)}{\sigma\sqrt{t}}\right)
+\right]
+```
+
+### Ksi term and the bivariate normal CDF
+
+Let $N_2(x,y;\rho)$ denote the standard bivariate normal CDF with correlation
+$\rho$. Define:
+
+```math
+\rho=\sqrt{\frac{t_1}{T}}
+```
+
+```math
+e_1=
+\frac{\ln(S/I_1)+\left(b+(\gamma-1/2)\sigma^2\right)t_1}
+{\sigma\sqrt{t_1}}
+```
+
+```math
+e_2=
+\frac{\ln(I_2^2/(SI_1))+\left(b+(\gamma-1/2)\sigma^2\right)t_1}
+{\sigma\sqrt{t_1}}
+```
+
+```math
+e_3=
+\frac{\ln(S/I_1)-\left(b+(\gamma-1/2)\sigma^2\right)t_1}
+{\sigma\sqrt{t_1}}
+```
+
+```math
+e_4=
+\frac{\ln(I_2^2/(SI_1))-\left(b+(\gamma-1/2)\sigma^2\right)t_1}
+{\sigma\sqrt{t_1}}
+```
+
+For the terminal boundary $H$:
+
+```math
+f_1=
+\frac{\ln(S/H)+\left(b+(\gamma-1/2)\sigma^2\right)T}
+{\sigma\sqrt{T}}
+```
+
+```math
+f_2=
+\frac{\ln(I_2^2/(SH))+\left(b+(\gamma-1/2)\sigma^2\right)T}
+{\sigma\sqrt{T}}
+```
+
+```math
+f_3=
+\frac{\ln(I_1^2/(SH))+\left(b+(\gamma-1/2)\sigma^2\right)T}
+{\sigma\sqrt{T}}
+```
+
+```math
+f_4=
+\frac{\ln(SI_1^2/(HI_2^2))+\left(b+(\gamma-1/2)\sigma^2\right)T}
+{\sigma\sqrt{T}}
+```
+
+Then:
+
+```math
+\begin{aligned}
+\xi(S,T,\gamma,H,I_2,I_1,t_1)
+=e^{\lambda T}S^\gamma\Bigg[&
+N_2(-e_1,-f_1;\rho)\\
+&-\left(\frac{I_2}{S}\right)^\kappa N_2(-e_2,-f_2;\rho)\\
+&-\left(\frac{I_1}{S}\right)^\kappa N_2(-e_3,-f_3;-\rho)\\
+&+\left(\frac{I_1}{I_2}\right)^\kappa N_2(-e_4,-f_4;-\rho)
+\Bigg]
+\end{aligned}
+```
+
+`BivariateNormal.cdf()` evaluates $N_2$ using the native Fortran `pbivnorm`
+routine through the Java Foreign Function and Memory API. The returned native
+probability is required to be finite and is clamped to $[0,1]$ to remove small
+floating-point excursions.
+
+### Call value
+
+If $S\ge I_2$, immediate exercise gives $S-K$. Otherwise the approximation is:
+
+```math
+\begin{aligned}
+C_{BS2002}={}&
+\alpha_2S^\beta
+-\alpha_2\phi(S,t_1,\beta,I_2,I_2)
++\phi(S,t_1,1,I_2,I_2)
+-\phi(S,t_1,1,I_1,I_2)\\
+&-K\phi(S,t_1,0,I_2,I_2)
++K\phi(S,t_1,0,I_1,I_2)
++\alpha_1\phi(S,t_1,\beta,I_1,I_2)\\
+&-\alpha_1\xi(S,T,\beta,I_1,I_2,I_1,t_1)
++\xi(S,T,1,I_1,I_2,I_1,t_1)\\
+&-\xi(S,T,1,K,I_2,I_1,t_1)
+-K\xi(S,T,0,I_1,I_2,I_1,t_1)
++K\xi(S,T,0,K,I_2,I_1,t_1)
+\end{aligned}
+```
+
+Because this is an approximation, the implementation enforces the
+no-arbitrage lower bound:
+
+```math
+V_A \ge \max(V_E,V_{\mathrm{intrinsic}})
+```
+
+The same lower bound is returned if $\beta$, an exercise boundary, a boundary
+coefficient or the final approximation becomes non-finite. At expiry the model
+returns intrinsic value directly.
+
+The reference tests reproduce all 36 Bjerksund-Stensland 2002 values from Haug
+table 3-2 for calls and puts on futures.
+
 ## Cox-Ross-Rubenstein Tree
 
 CRR uses symmetric multiplicative moves:
