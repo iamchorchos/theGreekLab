@@ -1,0 +1,27 @@
+TheGreekLab
+Copyright (c) 2026 Olivier Chorchos
+
+The original Java source code, tests and documentation are licensed under the
+MIT License.
+
+Native pbivnorm component
+-------------------------
+
+The file src/main/fortran/pbivnorm.f is derived from the CRAN pbivnorm package
+version 0.6.0:
+
+    https://CRAN.R-project.org/package=pbivnorm
+    https://github.com/brentonk/pbivnorm
+
+The numerical Fortran code is attributed to Alan Genz. The vectorized
+PBIVNORM subroutine was added by Brenton Kenkel in 2011 and was based on a
+similar interface by Adelchi Azzalini in the mnormt package. Additional authors
+are identified in the comments retained in the source file.
+
+The CRAN pbivnorm package is licensed under GPL version 2 or any later version
+(SPDX: GPL-2.0-or-later). Native binaries bundled with or built by this project
+are compiled from that source and carry the same license.
+
+Distributions combining the Java component and pbivnorm are provided under
+GPL-3.0-or-later. Complete license texts are available in LICENSES/ and, in
+built JAR files, META-INF/LICENSES/.

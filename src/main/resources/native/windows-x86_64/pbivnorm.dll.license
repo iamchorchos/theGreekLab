@@ -1,0 +1,4 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+
+This binary was compiled from src/main/fortran/pbivnorm.f. See the repository
+NOTICE file for provenance and author attribution.
