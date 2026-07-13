@@ -7,6 +7,7 @@
 ![Maven](https://img.shields.io/badge/Build-Maven-C71A36)
 ![JUnit](https://img.shields.io/badge/Tests-JUnit%205-25A162)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/44b8c5d347b14242968b22e35d706416)](https://app.codacy.com/gh/iamchorchos/theGreekLab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Coverage](https://app.codacy.com/project/badge/Coverage/44b8c5d347b14242968b22e35d706416)](https://app.codacy.com/gh/iamchorchos/theGreekLab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 ![License](https://img.shields.io/badge/License-MIT%20%2B%20GPL--2.0%2B-blue)
 [![Download ZIP](https://img.shields.io/badge/Download-ZIP-2EA44F)](https://github.com/iamchorchos/thegreeklab/archive/refs/heads/main.zip)
 
