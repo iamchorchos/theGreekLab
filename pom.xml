@@ -59,14 +59,14 @@
         <java.version>22</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jackson.version>2.18.2</jackson.version>
-        <junit.version>5.10.2</junit.version>
+        <jackson.version>2.22</jackson.version>
+        <junit.version>6.1.2</junit.version>
         <jmh.version>1.37</jmh.version>
         <exec.maven.version>3.6.3</exec.maven.version>
-        <jacoco.version>0.8.14</jacoco.version>
+        <jacoco.version>0.8.15</jacoco.version>
         <maven.javadoc.version>3.12.0</maven.javadoc.version>
-        <maven.source.version>3.3.1</maven.source.version>
-        <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
+        <maven.source.version>3.4.0</maven.source.version>
+        <spotbugs.annotations.version>4.10.3</spotbugs.annotations.version>
         <jacocoArgLine/>
     </properties>
     <dependencies>
@@ -102,13 +102,13 @@
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
-            <version>11.1.0</version>
+            <version>13.0.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections-api</artifactId>
-            <version>11.1.0</version>
+            <version>13.0.0</version>
         </dependency>
         <dependency>
             <groupId>net.jafama</groupId>
@@ -145,7 +145,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.15.0</version>
                 <configuration>
                     <release>${java.version}</release>
                     <annotationProcessorPaths>
@@ -209,7 +209,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.6</version>
                 <configuration>
                     <argLine>@{jacocoArgLine} --enable-native-access=ALL-UNNAMED</argLine>
                 </configuration>
@@ -249,7 +249,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.8.6.4</version>
+                <version>4.10.3.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>
