@@ -351,8 +351,9 @@ matching binary is bundled.
 
 The Java component is licensed under MIT. The Fortran source and native
 libraries are licensed under GPL-2.0-or-later. A distribution combining both
-components is provided under GPL-3.0-or-later. See the repository `LICENSE`,
-`NOTICE` and `LICENSES` directory for the complete terms and attribution.
+components is provided under GPL-3.0-or-later. See `LICENSE` for the combined
+distribution, `LICENSING.md` for the component-level explanation, and
+`NOTICE` plus the `LICENSES` directory for complete terms and attribution.
 
 ## Historical Volatility
 

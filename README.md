@@ -8,7 +8,8 @@
 ![JUnit](https://img.shields.io/badge/Tests-JUnit%205-25A162)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/44b8c5d347b14242968b22e35d706416)](https://app.codacy.com/gh/iamchorchos/theGreekLab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Coverage](https://app.codacy.com/project/badge/Coverage/44b8c5d347b14242968b22e35d706416)](https://app.codacy.com/gh/iamchorchos/theGreekLab/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
-![License](https://img.shields.io/badge/License-MIT%20%2B%20GPL--2.0%2B-blue)
+[![Release](https://img.shields.io/github/v/release/iamchorchos/theGreekLab)](https://github.com/iamchorchos/theGreekLab/releases)
+[![License](https://img.shields.io/badge/combined%20distribution-GPL--3.0--or--later-blue)](LICENSE)
 [![Download ZIP](https://img.shields.io/badge/Download-ZIP-2EA44F)](https://github.com/iamchorchos/thegreeklab/archive/refs/heads/main.zip)
 
 ![Project Type](https://img.shields.io/badge/Project-Java%20Library-0F766E)
@@ -79,6 +80,20 @@ the native CDF should enable native access for the unnamed module:
 --enable-native-access=ALL-UNNAMED
 ```
 
+## Releases
+
+Published versions are available from
+[GitHub Releases](https://github.com/iamchorchos/theGreekLab/releases). New
+semantic-version tags such as `v1.0.2` are verified automatically and publish:
+
+- the compiled library JAR,
+- source and Javadoc JARs,
+- SHA-256 checksums for every artifact.
+
+The project is not currently published to Maven Central. For development from
+source, use the Maven wrapper; for a released build, download the versioned JAR
+and verify it against `SHA256SUMS`.
+
 ## Running Tests
 
 Windows PowerShell:
@@ -116,6 +131,7 @@ The project is configured with:
 - SpotBugs during `mvn verify`
 - Codacy coverage and quality monitoring
 - GitHub Actions CI in `.github/workflows/ci.yml`
+- reproducible release artifacts from `.github/workflows/release.yml`
 
 The project itself should be treated primarily as a library.
 
@@ -167,6 +183,8 @@ Full examples for every supported model and volatility utility are available in
 
 - [Usage guide](docs/USAGE.md)
 - [Mathematical notes](docs/MATH.md)
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
 ## Project Structure
 
@@ -225,7 +243,8 @@ The test suite covers:
 
 ## Licensing
 
-TheGreekLab uses component-specific licensing:
+The combined JAR distribution is provided under
+[GPL-3.0-or-later](LICENSE). TheGreekLab uses component-specific licensing:
 
 - original Java code, tests and documentation: [MIT](LICENSES/MIT.txt),
 - `pbivnorm.f` and native binaries compiled from it:
@@ -235,13 +254,15 @@ TheGreekLab uses component-specific licensing:
 
 The MIT license continues to apply independently to the original Java files.
 The native provenance and author attribution are recorded in [NOTICE](NOTICE).
+The complete component-level explanation is in
+[LICENSING.md](LICENSING.md).
 License texts and the notice are also included in built JAR files under
 `META-INF`.
 
 ## Status
 
-This is a library-oriented project suitable for experimentation, learning and
-portfolio presentation in quantitative finance software engineering.
+This is a library-oriented quantitative-finance project with independently
+cross-validated pricing models and an automated verification pipeline.
 
 It is not financial advice and should not be used for live trading or risk
 management without independent validation.

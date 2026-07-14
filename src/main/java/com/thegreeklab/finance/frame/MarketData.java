@@ -24,23 +24,31 @@ import java.time.ZonedDateTime;
 public sealed interface MarketData permits FXFrame, EquityFrame, FuturesFrame {
 
     /**
+     * Returns the observation timestamp of this market-data snapshot.
+     *
      * @return the timestamp ("as of" time) of this market data snapshot, used
      * together with the option's expiration date to compute time to expiry
      */
     long timestampNanos();
 
     /**
+     * Returns the price used as the underlying input to the pricing model.
+     *
      * @return the spot price of the underlying asset (or, for futures, the
      * futures price standing in for spot in the pricing formula)
      */
     double spotPrice();
 
     /**
+     * Returns the continuously compounded risk-free discount rate.
+     *
      * @return the risk-free discount rate applicable to this market
      */
     double riskFreeRate();
 
     /**
+     * Returns the generalized Black-Scholes cost-of-carry parameter.
+     *
      * @return the cost-of-carry rate {@code b}, as defined by Haug's generalized
      * Black-Scholes-Merton model. The specific meaning of {@code b}
      * depends on the asset class (see class-level documentation).
@@ -48,6 +56,8 @@ public sealed interface MarketData permits FXFrame, EquityFrame, FuturesFrame {
     double costOfCarry();
 
     /**
+     * Creates a copy with a different risk-free rate.
+     *
      * @param newRate the replacement risk-free rate
      * @return a copy of this frame with {@link #riskFreeRate()} replaced by {@code newRate};
      * all other fields (including {@link #costOfCarry()}'s other inputs) are left unchanged
@@ -55,12 +65,16 @@ public sealed interface MarketData permits FXFrame, EquityFrame, FuturesFrame {
     MarketData withRiskFreeRate(double newRate);
 
     /**
+     * Creates a copy with a different underlying price.
+     *
      * @param newSpot the replacement spot price; must be strictly positive
      * @return a copy of this frame with {@link #spotPrice()} replaced by {@code newSpot}
      */
     MarketData withSpotPrice(double newSpot);
 
     /**
+     * Creates a copy with a different observation timestamp.
+     *
      * @param newTimestampNanos the replacement "as of" timestamp, in nanoseconds since the UNIX epoch
      * @return a copy of this frame with {@link #timestampNanos()} replaced by {@code newTimestampNanos}
      */
