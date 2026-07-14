@@ -279,6 +279,8 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     }
 
     /**
+     * Returns the contract's non-negative time to expiry at the market-data timestamp.
+     *
      * @return the actual time to expiry in years; {@code 0.0} if this instance
      * is at or after expiration
      */
@@ -469,6 +471,8 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     }
 
     /**
+     * Returns parmicharma, a third-order time/carry cross sensitivity.
+     *
      * @return the "parmicharma" Greek (third-order time/carry cross-sensitivity
      * building on {@link #charm()}); dispatches to the call or put variant
      * depending on contract type.
@@ -582,6 +586,8 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     }
 
     /**
+     * Returns veta, the time sensitivity of vega.
+     *
      * @return veta: the rate of change of vega with respect to the passage of time.
      */
     public double veta() {

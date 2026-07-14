@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.iamchorchos</groupId>
     <artifactId>TheGreekLab</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>jar</packaging>
 
     <name>TheGreekLab</name>
@@ -16,7 +16,7 @@
     <licenses>
         <license>
             <name>GPL-3.0-or-later</name>
-            <url>https://github.com/iamchorchos/theGreekLab/blob/main/LICENSES/GPL-3.0.txt</url>
+            <url>https://github.com/iamchorchos/theGreekLab/blob/main/LICENSE</url>
             <distribution>repo</distribution>
             <comments>
                 Applies to the combined JAR distribution. Original Java code remains
@@ -55,6 +55,7 @@
     </ciManagement>
 
     <properties>
+        <revision>1.0.2-SNAPSHOT</revision>
         <java.version>22</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -62,6 +63,8 @@
         <junit.version>5.10.2</junit.version>
         <jmh.version>1.37</jmh.version>
         <jacoco.version>0.8.14</jacoco.version>
+        <maven.javadoc.version>3.12.0</maven.javadoc.version>
+        <maven.source.version>3.3.1</maven.source.version>
         <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
         <jacocoArgLine/>
     </properties>
@@ -132,6 +135,7 @@
                 <targetPath>META-INF</targetPath>
                 <includes>
                     <include>LICENSE</include>
+                    <include>LICENSING.md</include>
                     <include>NOTICE</include>
                 </includes>
             </resource>
@@ -208,6 +212,38 @@
                 <configuration>
                     <argLine>@{jacocoArgLine} --enable-native-access=ALL-UNNAMED</argLine>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven.source.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven.javadoc.version}</version>
+                <configuration>
+                    <doclint>all</doclint>
+                    <failOnWarnings>true</failOnWarnings>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>

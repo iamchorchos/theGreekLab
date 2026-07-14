@@ -18,7 +18,7 @@ import java.util.Locale;
  * Cumulative distribution function of a standard bivariate normal distribution.
  *
  * <p>The numerical calculation is delegated to the native {@code pbivnorm}
- * Fortran routine through the Java Foreign Function & Memory API.</p>
+ * Fortran routine through the Java Foreign Function &amp; Memory API.</p>
  */
 public final class BivariateNormal {
 

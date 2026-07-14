@@ -21,26 +21,45 @@ import java.util.Objects;
  */
 public abstract sealed class BinomialModel implements Greeks permits LeisenReimer, CoxRossRubenstein {
 
+    /** Option payoff direction. */
     protected final OptionType type;
+    /** Current underlying price. */
     protected final double s;
+    /** Option strike price. */
     protected final double k;
+    /** Continuously compounded risk-free rate. */
     protected final double r;
+    /** Generalized cost-of-carry parameter. */
     protected final double costOfCarry;
+    /** Length of one tree step in years. */
     protected final double dt;
+    /** Number of time steps in the tree. */
     protected final int steps;
+    /** Immutable option contract being priced. */
     protected final OptionContract contract;
+    /** Immutable market-data snapshot used by this tree. */
     protected final MarketData frame;
+    /** Numerical floor used by finite-difference calculations. */
     protected static final double EPSILON = 1e-6;
 
+    /** Relative one-percent bump used for volatility and price sensitivities. */
     protected static final double ONE_PERCENT_BUMP = 0.01;
+    /** One-basis-point rate bump. */
     protected static final double ONE_BP_BUMP = 0.0001;
+    /** One day expressed in nanoseconds. */
     protected static final long ONE_DAY_NANOS = 86_400_000_000_000L;
+    /** Smallest absolute price or strike bump used by finite differences. */
     protected static final double MIN_ABSOLUTE_BUMP = 1e-4;
+    /** Smallest time fraction for which a full-day theta bump is used. */
     protected static final double MIN_TIME_FRACTION = 1.0 / 365.0;
+    /** Time to expiry, in years, at the market-data timestamp. */
     protected final double tNow;
 
+    /** Per-step upward price multiplier. */
     protected double u;
+    /** Per-step downward price multiplier. */
     protected double d;
+    /** Risk-neutral probability of an upward move. */
     protected double p;
 
     /**
@@ -94,6 +113,12 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
         return (up - down) / totalBump;
     }
 
+    /**
+     * Estimates theta from cached values at the root and the middle step-two node.
+     *
+     * @return annualized theta estimate based on two tree time steps
+     * @throws InvalidStepCountException if the tree contains fewer than three steps
+     */
     protected final double fastThetaViaNodeCache() {
         requireMinSteps(3, "Theta");
         ensureCalculated();
@@ -123,6 +148,13 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
         return (valueBumped - valueNow) / dtYears;
     }
 
+    /**
+     * Calculates the underlying price at a tree node.
+     *
+     * @param step    zero-based time step
+     * @param upMoves number of upward moves leading to the node
+     * @return underlying price at the requested node
+     */
     protected abstract double calculateSpotNode(int step, int upMoves);
 
     private record TreeCache(double price, double[] nodesStep1, double[] nodesStep2) {
@@ -257,14 +289,43 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
     }
 
 
+    /**
+     * Creates an equivalent tree with a replacement risk-free rate.
+     *
+     * @param newRate replacement continuously compounded rate
+     * @return newly constructed tree with the requested rate
+     */
     protected abstract BinomialModel withRiskFreeRate(double newRate);
 
+    /**
+     * Creates an equivalent tree with a replacement volatility.
+     *
+     * @param newVolatility replacement annualized volatility
+     * @return newly constructed tree with the requested volatility
+     */
     protected abstract BinomialModel withVolatility(double newVolatility);
 
+    /**
+     * Returns the annualized volatility used by this tree.
+     *
+     * @return annualized volatility as a decimal
+     */
     protected abstract double getVolatility();
 
+    /**
+     * Creates an equivalent tree with a replacement underlying price.
+     *
+     * @param newSpot replacement underlying price
+     * @return newly constructed tree with the requested price
+     */
     protected abstract BinomialModel withSpot(double newSpot);
 
+    /**
+     * Creates an equivalent tree observed at another timestamp.
+     *
+     * @param newTimestampNanos replacement timestamp in nanoseconds since the UNIX epoch
+     * @return newly constructed tree at the requested timestamp
+     */
     protected abstract BinomialModel withTimestamp(long newTimestampNanos);
 
     @Override
@@ -351,5 +412,11 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
         return this.delta() * this.s / currentPrice;
     }
 
+    /**
+     * Creates an equivalent tree with a replacement strike.
+     *
+     * @param newStrike replacement strike price
+     * @return newly constructed tree with the requested strike
+     */
     protected abstract BinomialModel withStrike(double newStrike);
 }

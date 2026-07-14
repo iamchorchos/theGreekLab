@@ -1,0 +1,59 @@
+name: Bug report
+description: Report reproducible incorrect behavior or a regression
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve TheGreekLab. Do not report security vulnerabilities here; use private vulnerability reporting instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release, tag or commit where the problem occurs.
+      placeholder: v1.0.1
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows x86-64
+        - Linux x86-64
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest input, code sample or test that reproduces the problem.
+      render: java
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Add stack traces or build output without secrets or personal data.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report does not contain a security vulnerability.
+          required: true
+

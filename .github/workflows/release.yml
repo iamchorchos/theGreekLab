@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
+          cache: maven
+
+      - name: Validate release tag
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a semantic-version tag such as v1.0.2, got: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Release tags must point to a commit reachable from main." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build native pbivnorm library
+        run: |
+          mkdir -p src/main/resources/native/linux-x86_64
+          gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
+            src/main/fortran/pbivnorm.f \
+            -o src/main/resources/native/linux-x86_64/libpbivnorm.so
+
+      - name: Verify and package
+        run: ./mvnw -B -ntp -Drevision=${{ steps.version.outputs.version }} clean verify
+
+      - name: Generate checksums
+        working-directory: target
+        run: |
+          sha256sum \
+            TheGreekLab-${{ steps.version.outputs.version }}.jar \
+            TheGreekLab-${{ steps.version.outputs.version }}-sources.jar \
+            TheGreekLab-${{ steps.version.outputs.version }}-javadoc.jar \
+            > SHA256SUMS
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          assets=(
+            "target/TheGreekLab-$VERSION.jar"
+            "target/TheGreekLab-$VERSION-sources.jar"
+            "target/TheGreekLab-$VERSION-javadoc.jar"
+            "target/SHA256SUMS"
+          )
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --verify-tag \
+              --title "theGreekLab $GITHUB_REF_NAME" \
+              --generate-notes
+          fi
