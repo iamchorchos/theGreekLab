@@ -55,22 +55,22 @@ public final class CoxRossRubenstein extends BinomialModel {
     }
 
     @Override
-    protected BinomialModel withVolatility(double newVolatility) {
+    public CoxRossRubenstein withVolatility(double newVolatility) {
         return new CoxRossRubenstein(this.contract, this.frame, newVolatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withRiskFreeRate(double newRate) {
+    public CoxRossRubenstein withRiskFreeRate(double newRate) {
         return new CoxRossRubenstein(this.contract, this.frame.withRiskFreeRate(newRate), this.volatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withSpot(double newSpot) {
+    public CoxRossRubenstein withSpot(double newSpot) {
         return new CoxRossRubenstein(this.contract, this.frame.withSpotPrice(newSpot), this.volatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withTimestamp(long newTimestampNanos) {
+    public CoxRossRubenstein withTimestamp(long newTimestampNanos) {
         return new CoxRossRubenstein(this.contract, this.frame.withTimestampNanos(newTimestampNanos), this.volatility, this.steps);
     }
 

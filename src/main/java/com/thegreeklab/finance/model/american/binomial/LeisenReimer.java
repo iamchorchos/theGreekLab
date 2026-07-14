@@ -87,27 +87,27 @@ public final class LeisenReimer extends BinomialModel {
     }
 
     @Override
-    protected BinomialModel withVolatility(double newVolatility) {
+    public LeisenReimer withVolatility(double newVolatility) {
         return new LeisenReimer(this.contract, this.frame, newVolatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withRiskFreeRate(double newRate) {
+    public LeisenReimer withRiskFreeRate(double newRate) {
         return new LeisenReimer(this.contract, this.frame.withRiskFreeRate(newRate), this.volatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withSpot(double newSpot) {
+    public LeisenReimer withSpot(double newSpot) {
         return new LeisenReimer(this.contract, this.frame.withSpotPrice(newSpot), this.volatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withTimestamp(long newTimestampNanos) {
+    public LeisenReimer withTimestamp(long newTimestampNanos) {
         return new LeisenReimer(this.contract, this.frame.withTimestampNanos(newTimestampNanos), this.volatility, this.steps);
     }
 
     @Override
-    protected BinomialModel withStrike(double newStrike) {
+    protected LeisenReimer withStrike(double newStrike) {
         return new LeisenReimer(this.contract.withStrike(newStrike), this.frame, this.volatility, this.steps);
     }
 

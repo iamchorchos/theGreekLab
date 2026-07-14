@@ -7,50 +7,7 @@ package com.thegreeklab.finance.model.greeks;
  * unit move in the underlying input: vega per 1.00 volatility, rho per 1.00
  * rate and theta on an annualized basis.
  */
-public interface Greeks {
-
-    /**
-     * Returns the theoretical option value.
-     *
-     * @return theoretical option value under the model
-     */
-    double price();
-
-    /**
-     * Returns delta, the first-order spot sensitivity.
-     *
-     * @return first derivative of price with respect to the underlying price
-     */
-    double delta();
-
-    /**
-     * Returns gamma, the second-order spot sensitivity.
-     *
-     * @return second derivative of price with respect to the underlying price
-     */
-    double gamma();
-
-    /**
-     * Returns vega, the first-order volatility sensitivity.
-     *
-     * @return first derivative of price with respect to volatility
-     */
-    double vega();
-
-    /**
-     * Returns theta, the sensitivity to the passage of time.
-     *
-     * @return first derivative of price with respect to the passage of time,
-     * annualized unless the concrete model documents another convention
-     */
-    double theta();
-
-    /**
-     * Returns rho, the first-order discount-rate sensitivity.
-     *
-     * @return first derivative of price with respect to the discounting rate
-     */
-    double rho();
+public interface Greeks extends StandardGreeks{
 
     /**
      * Returns vanna, the spot-volatility cross sensitivity.

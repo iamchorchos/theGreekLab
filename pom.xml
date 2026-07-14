@@ -62,6 +62,7 @@
         <jackson.version>2.18.2</jackson.version>
         <junit.version>5.10.2</junit.version>
         <jmh.version>1.37</jmh.version>
+        <exec.maven.version>3.6.3</exec.maven.version>
         <jacoco.version>0.8.14</jacoco.version>
         <maven.javadoc.version>3.12.0</maven.javadoc.version>
         <maven.source.version>3.3.1</maven.source.version>
@@ -267,4 +268,49 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>benchmarks</id>
+            <properties>
+                <benchmark.include>.*(AmericanOption|BivariateNormal)Benchmark.*</benchmark.include>
+                <benchmark.warmupIterations>5</benchmark.warmupIterations>
+                <benchmark.measurementIterations>5</benchmark.measurementIterations>
+                <benchmark.iterationTime>1s</benchmark.iterationTime>
+                <benchmark.forks>1</benchmark.forks>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec.maven.version}</version>
+                        <configuration>
+                            <executable>java</executable>
+                            <classpathScope>test</classpathScope>
+                            <arguments>
+                                <argument>-cp</argument>
+                                <classpath/>
+                                <argument>org.openjdk.jmh.Main</argument>
+                                <argument>${benchmark.include}</argument>
+                                <argument>-wi</argument>
+                                <argument>${benchmark.warmupIterations}</argument>
+                                <argument>-i</argument>
+                                <argument>${benchmark.measurementIterations}</argument>
+                                <argument>-w</argument>
+                                <argument>${benchmark.iterationTime}</argument>
+                                <argument>-r</argument>
+                                <argument>${benchmark.iterationTime}</argument>
+                                <argument>-f</argument>
+                                <argument>${benchmark.forks}</argument>
+                                <argument>-rf</argument>
+                                <argument>json</argument>
+                                <argument>-rff</argument>
+                                <argument>${project.build.directory}/jmh-result.json</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

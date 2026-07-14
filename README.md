@@ -16,7 +16,7 @@
 ![Domain](https://img.shields.io/badge/Domain-Quant%20Finance-1D4ED8)
 ![Models](https://img.shields.io/badge/Models-BSM%20%7C%20Black--76%20%7C%20CRR%20%7C%20LR%20%7C%20BS2002-7C3AED)
 ![Native](https://img.shields.io/badge/Native-Java%20Panama%20%2B%20Fortran-2563EB)
-![Greeks](https://img.shields.io/badge/Greeks-Analytical%20%2B%20Binomial-B45309)
+![Greeks](https://img.shields.io/badge/Greeks-Analytical%20%2B%20Numerical-B45309)
 ![Maven Wrapper](https://img.shields.io/badge/Maven%20Wrapper-Included-2EA44F)
 
 TheGreekLab is a Java quantitative finance library for option pricing, Greeks,
@@ -39,8 +39,9 @@ numerical tests for vanilla European and American option models.
   - bivariate normal CDF through the Java Foreign Function and Memory API
   - original Fortran `pbivnorm` routine
 - Greeks:
-  - price
-  - delta, gamma, vega, theta, rho
+  - price, delta, gamma, vega, theta and rho across supported pricing models
+  - immutable `StandardGreekValues` snapshots for retrieving them together
+  - numerical standard Greeks for Bjerksund-Stensland 2002
   - vanna, volga, charm, speed, lambda
   - dual delta, dual gamma
   - vera, zomma, color, ultima
@@ -120,6 +121,45 @@ To run all verification checks and generate the JaCoCo coverage report:
 The local HTML report is written to `target/site/jacoco/index.html`. The build
 requires at least 85% line coverage and 65% branch coverage. CI also archives
 the complete report and uploads `jacoco.xml` to Codacy.
+
+## Benchmarks
+
+The JMH suite measures:
+
+- the Bjerksund-Stensland price, each standard Greek and the combined
+  `greeks()` snapshot,
+- complete Bjerksund-Stensland, Cox-Ross-Rubinstein and Leisen-Reimer
+  valuations, including their standard Greeks,
+- an end-to-end call to native `pbivnorm` through the public Panama FFM
+  bridge.
+
+Run the benchmark profile on Windows:
+
+```powershell
+.\mvnw.cmd -Pbenchmarks test-compile exec:exec
+```
+
+On Linux/macOS:
+
+```bash
+./mvnw -Pbenchmarks test-compile exec:exec
+```
+
+The model comparison uses a one-year American put with strike 100, spot 95,
+a 5% risk-free rate, 3% dividend yield and 25% volatility. The tree models run
+with 251 and 1001 steps. Every measured binomial invocation receives a fresh
+model so that the benchmark includes tree construction and backward induction
+instead of reporting a cached price.
+To run only the American-option benchmark:
+
+```powershell
+.\mvnw.cmd -Pbenchmarks test-compile exec:exec "-Dbenchmark.include=.*AmericanOptionBenchmark.*"
+```
+
+Results are printed to the console and saved as
+`target/jmh-result.json`. Run benchmarks outside a debugger on an otherwise
+idle machine; absolute timings depend on the JDK, native library, CPU and
+operating system.
 
 ## Code Quality
 
@@ -214,7 +254,8 @@ src/test/resources            numerical reference datasets
 - The library separates contract data from market data.
 - European models accept only European contracts.
 - American binomial models accept only American contracts.
-- Bjerksund-Stensland accepts American contracts and returns price only.
+- Bjerksund-Stensland accepts American contracts and exposes price plus
+  numerical delta, gamma, vega, theta and rho.
 - Market-data frames encode the model-specific cost of carry:
   - `EquityFrame`: `b = r - q`
   - `FuturesFrame`: `b = 0`
@@ -239,6 +280,7 @@ The test suite covers:
 - all 36 Bjerksund-Stensland 2002 values from Haug table 3-2
 - bivariate normal identities and perfect-correlation limits
 - Bjerksund-Stensland expiry, no-arbitrage bounds and numerical fallback
+- Bjerksund-Stensland Greeks in the European limit and American exercise region
 - CRR price cross-validation against generated reference data
 
 ## Licensing

@@ -80,6 +80,26 @@ class BlackScholesCallPriceTest {
         );
     }
 
+    @Test
+    void snapshotMatchesIndividualGreeks() {
+        EquityFrame frame = new EquityFrame(NOW, SPOT, 0.05, 0.02);
+        BlackScholesMerton model = new BlackScholesMerton(
+                contract(OptionType.CALL),
+                frame,
+                VOLATILITY
+        );
+        var values = model.greeks();
+
+        assertAll(
+                () -> assertEquals(model.price(), values.price(), TOLERANCE),
+                () -> assertEquals(model.delta(), values.delta(), TOLERANCE),
+                () -> assertEquals(model.gamma(), values.gamma(), TOLERANCE),
+                () -> assertEquals(model.vega(), values.vega(), TOLERANCE),
+                () -> assertEquals(model.theta(), values.theta(), TOLERANCE),
+                () -> assertEquals(model.rho(), values.rho(), TOLERANCE)
+        );
+    }
+
     private static double directCallPrice(OptionContract contract, MarketData frame) {
         return BlackScholes.callPrice(
                 frame.spotPrice(),
