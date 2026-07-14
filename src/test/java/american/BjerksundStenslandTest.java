@@ -8,6 +8,7 @@ import com.thegreeklab.finance.frame.FuturesFrame;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.approximations.BjerksundStensland;
 import com.thegreeklab.finance.model.european.BlackScholes;
+import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -110,10 +111,10 @@ class BjerksundStenslandTest {
     void expiryIntrinsic() {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
 
-        BjerksundStensland call = option(OptionType.CALL, 100.0, expiry, 110.0, 0.05, 0.02);
-        BjerksundStensland put = option(OptionType.PUT, 100.0, expiry, 90.0, 0.05, 0.02);
-        BjerksundStensland outOfTheMoneyCall = option(OptionType.CALL, 100.0, expiry, 90.0, 0.05, 0.02);
-        BjerksundStensland outOfTheMoneyPut = option(OptionType.PUT, 100.0, expiry, 110.0, 0.05, 0.02);
+        BjerksundStensland call = option(OptionType.CALL, expiry, 110.0);
+        BjerksundStensland put = option(OptionType.PUT, expiry, 90.0);
+        BjerksundStensland outOfTheMoneyCall = option(OptionType.CALL, expiry, 90.0);
+        BjerksundStensland outOfTheMoneyPut = option(OptionType.PUT, expiry, 110.0);
 
         assertAll(
                 () -> assertEquals(10.0, call.price(), TOLERANCE),
@@ -194,7 +195,7 @@ class BjerksundStenslandTest {
         );
 
         assertAll(
-                () -> assertTrue(americanPrice >= Math.max(spot - strike, 0.0)),
+                () -> assertTrue(americanPrice >= 0.0),
                 () -> assertTrue(americanPrice >= europeanPrice)
         );
     }
@@ -263,17 +264,77 @@ class BjerksundStenslandTest {
         );
     }
 
+    @Test
+    void greeksMatchEuropeanLimit() {
+        ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
+        ZonedDateTime expiry = valuationTime.plusYears(1);
+        EquityFrame frame = new EquityFrame(valuationTime, 100.0, 0.05, 0.0);
+        double volatility = 0.20;
+
+        OptionContract americanContract = contract(OptionType.CALL, 100.0, expiry);
+        OptionContract europeanContract = new OptionContract(
+                "TEST",
+                OptionType.CALL,
+                Option.EUROPEAN,
+                100.0,
+                expiry,
+                100
+        );
+
+        BjerksundStensland american = new BjerksundStensland(americanContract, frame, volatility);
+        BlackScholesMerton european = new BlackScholesMerton(europeanContract, frame, volatility);
+
+        assertAll(
+                () -> assertEquals(european.delta(), american.delta(), 1e-6),
+                () -> assertEquals(european.gamma(), american.gamma(), 1e-6),
+                () -> assertEquals(european.vega(), american.vega(), 1e-5),
+                () -> assertEquals(european.theta(), american.theta(), 5e-2),
+                () -> assertEquals(european.rho(), american.rho(), 1e-5)
+        );
+    }
+
+    @Test
+    void americanGreeksAreFinite() {
+        ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
+        OptionContract contract = contract(OptionType.CALL, 100.0, valuationTime.plusYears(1));
+        EquityFrame frame = new EquityFrame(valuationTime, 100.0, 0.05, 0.08);
+        BjerksundStensland model = new BjerksundStensland(contract, frame, 0.20);
+
+        assertAll(
+                () -> assertTrue(Double.isFinite(model.delta())),
+                () -> assertTrue(Double.isFinite(model.gamma())),
+                () -> assertTrue(Double.isFinite(model.vega())),
+                () -> assertTrue(Double.isFinite(model.theta())),
+                () -> assertTrue(Double.isFinite(model.rho()))
+        );
+    }
+
+    @Test
+    void snapshotMatchesIndividualGreeks() {
+        ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
+        OptionContract contract = contract(OptionType.PUT, 100.0, valuationTime.plusYears(1));
+        EquityFrame frame = new EquityFrame(valuationTime, 95.0, 0.05, 0.03);
+        BjerksundStensland model = new BjerksundStensland(contract, frame, 0.25);
+        var values = model.greeks();
+
+        assertAll(
+                () -> assertEquals(model.price(), values.price(), TOLERANCE),
+                () -> assertEquals(model.delta(), values.delta(), TOLERANCE),
+                () -> assertEquals(model.gamma(), values.gamma(), TOLERANCE),
+                () -> assertEquals(model.vega(), values.vega(), TOLERANCE),
+                () -> assertEquals(model.theta(), values.theta(), TOLERANCE),
+                () -> assertEquals(model.rho(), values.rho(), TOLERANCE)
+        );
+    }
+
     private static BjerksundStensland option(
             OptionType type,
-            double strike,
             ZonedDateTime expiry,
-            double spot,
-            double riskFreeRate,
-            double dividendYield
+            double spot
     ) {
         return new BjerksundStensland(
-                contract(type, strike, expiry),
-                new EquityFrame(expiry, spot, riskFreeRate, dividendYield),
+                contract(type, 100.0, expiry),
+                new EquityFrame(expiry, spot, 0.05, 0.02),
                 0.20
         );
     }

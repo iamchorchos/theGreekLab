@@ -7,6 +7,8 @@ import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.european.BlackScholes;
+import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
+import com.thegreeklab.finance.model.greeks.StandardGreekValues;
 import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.BivariateNormal;
 import com.thegreeklab.math.ERF;
@@ -34,6 +36,18 @@ import java.util.Objects;
  * {@link BivariateNormal}, which delegates to the native {@code pbivnorm}
  * routine through the Java Foreign Function and Memory API.</p>
  *
+ * <p>The standard Greeks are numerical bump-and-revalue estimates. Delta,
+ * gamma and rho use central differences; vega uses the valid interval around
+ * the current volatility and respects
+ * {@link PricingValidation#MIN_VOLATILITY}; theta advances the market-data
+ * timestamp by at most one calendar day and is returned on an annualized
+ * basis.</p>
+ *
+ * <p>The approximation is piecewise smooth because it selects between
+ * intrinsic value, the European lower bound and the analytical approximation.
+ * Numerical Greeks may therefore be sensitive to bump size near an exercise
+ * boundary, expiry or a numerical fallback boundary.</p>
+ *
  * <p>The formula and notation follow Espen Gaarder Haug,
  * <i>The Complete Guide to Option Pricing Formulas</i>, 2nd edition.</p>
  *
@@ -41,7 +55,7 @@ import java.util.Objects;
  *
  * @see BlackScholes
  */
-public final class BjerksundStensland {
+public final class BjerksundStensland implements BumpableOptionModel {
 
     private final double strikePrice;
     private final double spotPrice;
@@ -51,6 +65,14 @@ public final class BjerksundStensland {
     private final double riskFreeRate;
     private final double costOfCarry;
     private final OptionType type;
+    private final OptionContract contract;
+    private final MarketData frame;
+
+    private static final double DELTA_SPOT_BUMP = 1e-4;
+    private static final double GAMMA_SPOT_BUMP = 1e-3;
+    private static final double VOLATILITY_BUMP = 1e-4;
+    private static final double RATE_BUMP = 1e-4;
+    private static final long ONE_DAY_NANOS = 86_400_000_000_000L;
 
     /**
      * Creates an American-option pricing engine for a contract and a market-data snapshot.
@@ -83,6 +105,8 @@ public final class BjerksundStensland {
         this.riskFreeRate = marketData.riskFreeRate();
         this.costOfCarry = marketData.costOfCarry();
         this.type = optionContract.type();
+        this.contract = optionContract;
+        this.frame = marketData;
     }
 
     /**
@@ -94,6 +118,7 @@ public final class BjerksundStensland {
      *
      * @return theoretical value of the American option
      */
+    @Override
     public double price() {
         if (timeToExpiry <= 0.0) {
             return switch (type) {
@@ -245,4 +270,142 @@ public final class BjerksundStensland {
         double temp = (b + (gamma - 0.5) * volatilitySq) * time;
         return (logTemp + temp) / (volatility * FastMath.sqrt(time));
     }
+
+    @Override
+    public BjerksundStensland withVolatility(double newVolatility) {
+        return new BjerksundStensland(contract, frame, newVolatility);
+    }
+
+    @Override
+    public BjerksundStensland withRiskFreeRate(double newRate) {
+        return new BjerksundStensland(contract, frame.withRiskFreeRate(newRate), volatility);
+    }
+
+    @Override
+    public BjerksundStensland withSpot(double newSpot) {
+        return new BjerksundStensland(contract, frame.withSpotPrice(newSpot), volatility);
+    }
+
+    @Override
+    public BjerksundStensland withTimestamp(long newTimestampNanos) {
+        return new BjerksundStensland(contract, frame.withTimestampNanos(newTimestampNanos), volatility);
+    }
+
+    /**
+     * Estimates delta with a central spot bump.
+     *
+     * @return numerical first derivative of price with respect to spot
+     */
+    @Override
+    public double delta() {
+        double deltaBump = Math.max(spotPrice * DELTA_SPOT_BUMP, 1e-6);
+
+        double up = withSpot(spotPrice + deltaBump).price();
+        double down = withSpot(spotPrice - deltaBump).price();
+
+        return (up - down) / (2.0 * deltaBump);
+    }
+
+    /**
+     * Estimates gamma with a central spot bump larger than the delta bump to
+     * reduce amplification of numerical noise.
+     *
+     * @return numerical second derivative of price with respect to spot
+     */
+    @Override
+    public double gamma() {
+        return gamma(price());
+    }
+
+    private double gamma(double center) {
+        double gammaBump = Math.max(spotPrice * GAMMA_SPOT_BUMP, 1e-6);
+
+        double up = withSpot(spotPrice + gammaBump).price();
+        double down = withSpot(spotPrice - gammaBump).price();
+
+        return (up - 2.0 * center + down) / (gammaBump * gammaBump);
+    }
+
+    /**
+     * Estimates vega over the valid volatility interval surrounding the
+     * current value. The lower endpoint is clamped to the supported minimum.
+     *
+     * @return numerical first derivative of price with respect to volatility,
+     * per unit of volatility
+     */
+    @Override
+    public double vega() {
+        double vegaBump = Math.max(volatility * VOLATILITY_BUMP, 1e-6);
+        double volatilityDown = Math.max(
+                volatility - vegaBump,
+                PricingValidation.MIN_VOLATILITY
+        );
+
+        double up = withVolatility(volatility + vegaBump).price();
+        double down = withVolatility(volatilityDown).price();
+
+        return (up - down) / (volatility + vegaBump - volatilityDown);
+    }
+
+    /**
+     * Estimates annualized theta by advancing the valuation timestamp by at
+     * most one day. At expiry the method returns {@code 0.0}.
+     *
+     * @return numerical derivative of price with respect to the passage of
+     * calendar time, annualized
+     */
+    @Override
+    public double theta() {
+        return theta(price());
+    }
+
+    private double theta(double current) {
+        if (timeToExpiry <= 0.0) {
+            return 0.0;
+        }
+
+        long remainingNanos = contract.expirationNanosEpoch() - frame.timestampNanos();
+        long thetaBump = Math.min(ONE_DAY_NANOS, Math.max(1L, remainingNanos / 2L));
+        long bumpedTimestamp = Math.addExact(frame.timestampNanos(), thetaBump);
+        double bumpedTimeToExpiry = contract.getTimeToExpiry(bumpedTimestamp);
+        double elapsedYears = timeToExpiry - bumpedTimeToExpiry;
+
+        double bumped = withTimestamp(bumpedTimestamp).price();
+
+        return (bumped - current) / elapsedYears;
+    }
+
+    /**
+     * Estimates rho with a central one-basis-point risk-free-rate bump.
+     *
+     * @return numerical first derivative of price with respect to the
+     * risk-free rate, per unit of rate
+     */
+    @Override
+    public double rho() {
+        double up = withRiskFreeRate(riskFreeRate + RATE_BUMP).price();
+        double down = withRiskFreeRate(riskFreeRate - RATE_BUMP).price();
+
+        return (up - down) / (2.0 * RATE_BUMP);
+    }
+
+    /**
+     * Calculates the complete standard-Greek snapshot while reusing the base
+     * option value for gamma and theta.
+     *
+     * @return price and all five numerical standard Greeks
+     */
+    @Override
+    public StandardGreekValues greeks() {
+        double currentPrice = price();
+        return new StandardGreekValues(
+                currentPrice,
+                delta(),
+                gamma(currentPrice),
+                vega(),
+                theta(currentPrice),
+                rho()
+        );
+    }
+
 }

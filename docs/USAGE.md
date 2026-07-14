@@ -25,7 +25,7 @@ The library separates option contracts from market data.
 
 ## Supported Greeks
 
-The common `Greeks` interface exposes:
+The `StandardGreeks` interface exposes:
 
 - `price()`
 - `delta()`
@@ -33,6 +33,12 @@ The common `Greeks` interface exposes:
 - `vega()`
 - `theta()`
 - `rho()`
+- `greeks()`, returning an immutable `StandardGreekValues` snapshot
+
+`BjerksundStensland` implements this standard surface with numerical
+bump-and-revalue estimates. The full `Greeks` interface extends
+`StandardGreeks` with:
+
 - `vanna()`
 - `volga()`
 - `charm()`
@@ -259,8 +265,8 @@ double rho = model.rho();
 
 `BjerksundStensland` is a closed-form approximation for vanilla American
 options. It supports every `MarketData` implementation through the generalized
-cost-of-carry parameter and returns the option price. American puts are handled
-internally through put-call symmetry.
+cost-of-carry parameter and returns the option price plus the five standard
+Greeks. American puts are handled internally through put-call symmetry.
 
 ```java
 import com.thegreeklab.finance.contract.OptionContract;
@@ -294,11 +300,26 @@ EquityFrame frame = new EquityFrame(
 BjerksundStensland model = new BjerksundStensland(put, frame, 0.22);
 
 double price = model.price();
+double delta = model.delta();
+double gamma = model.gamma();
+double vega = model.vega();
+double theta = model.theta();
+double rho = model.rho();
+
+var values = model.greeks();
+double snapshotPrice = values.price();
+double snapshotDelta = values.delta();
 ```
 
 The approximation enforces the European and intrinsic-value lower bounds. If
 the analytical exercise boundary becomes non-finite, it returns that
 no-arbitrage lower bound instead of propagating `NaN`.
+
+The Greeks are numerical bump-and-revalue estimates rather than analytical
+derivatives. Vega and rho are expressed per unit move in volatility and rate,
+respectively; theta is annualized. Because the price approximation is
+piecewise smooth, the estimates can be sensitive to bump size near an early
+exercise boundary, expiry or a numerical fallback boundary.
 
 ## Native pbivnorm Configuration
 

@@ -632,6 +632,54 @@ returns intrinsic value directly.
 The reference tests reproduce all 36 Bjerksund-Stensland 2002 values from Haug
 table 3-2 for calls and puts on futures.
 
+### Numerical Greeks
+
+The Bjerksund-Stensland implementation exposes delta, gamma, vega, theta and
+rho through bump-and-revalue differentiation of the complete bounded price
+function. For a model value $V$ and bump $h$:
+
+```math
+\Delta \approx \frac{V(S+h_S)-V(S-h_S)}{2h_S}
+```
+
+```math
+\Gamma \approx
+\frac{V(S+h_\Gamma)-2V(S)+V(S-h_\Gamma)}{h_\Gamma^2}
+```
+
+```math
+\text{Vega} \approx
+\frac{V(\sigma+h_\sigma)-V(\sigma-h_\sigma)}{2h_\sigma}
+```
+
+```math
+\rho \approx \frac{V(r+h_r)-V(r-h_r)}{2h_r}
+```
+
+The volatility interval is shortened at
+`PricingValidation.MIN_VOLATILITY`, and the actual interval width is used in
+the denominator. Theta advances the market-data timestamp:
+
+```math
+\Theta \approx
+\frac{V(t+\Delta t)-V(t)}{\Delta t_{\text{years}}}
+```
+
+The default bumps are:
+
+| Greek | Bump |
+|---|---|
+| delta | $\max(10^{-4}S,10^{-6})$ |
+| gamma | $\max(10^{-3}S,10^{-6})$ |
+| vega | $\max(10^{-4}\sigma,10^{-6})$ |
+| rho | $10^{-4}$ (one basis point) |
+| theta | at most one calendar day and at most half the remaining time |
+
+These derivatives include the intrinsic-value and European lower bounds.
+Consequently, values close to an exercise boundary, expiry or fallback regime
+may depend more strongly on the selected bump because the bounded
+approximation is only piecewise smooth.
+
 ## Cox-Ross-Rubenstein Tree
 
 CRR uses symmetric multiplicative moves:

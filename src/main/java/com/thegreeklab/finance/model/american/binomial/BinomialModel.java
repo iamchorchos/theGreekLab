@@ -5,6 +5,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.exception.*;
 import com.thegreeklab.finance.frame.MarketData;
+import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
 import com.thegreeklab.finance.model.greeks.Greeks;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.jafama.FastMath;
@@ -19,7 +20,7 @@ import java.util.Objects;
  * rolls the tree backwards with early exercise at each node, so only
  * {@link Option#AMERICAN} contracts are accepted.
  */
-public abstract sealed class BinomialModel implements Greeks permits LeisenReimer, CoxRossRubenstein {
+public abstract sealed class BinomialModel implements Greeks, BumpableOptionModel permits LeisenReimer, CoxRossRubenstein {
 
     /** Option payoff direction. */
     protected final OptionType type;
@@ -295,7 +296,8 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
      * @param newRate replacement continuously compounded rate
      * @return newly constructed tree with the requested rate
      */
-    protected abstract BinomialModel withRiskFreeRate(double newRate);
+    @Override
+    public abstract BinomialModel withRiskFreeRate(double newRate);
 
     /**
      * Creates an equivalent tree with a replacement volatility.
@@ -303,7 +305,8 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
      * @param newVolatility replacement annualized volatility
      * @return newly constructed tree with the requested volatility
      */
-    protected abstract BinomialModel withVolatility(double newVolatility);
+    @Override
+    public abstract BinomialModel withVolatility(double newVolatility);
 
     /**
      * Returns the annualized volatility used by this tree.
@@ -318,7 +321,8 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
      * @param newSpot replacement underlying price
      * @return newly constructed tree with the requested price
      */
-    protected abstract BinomialModel withSpot(double newSpot);
+    @Override
+    public abstract BinomialModel withSpot(double newSpot);
 
     /**
      * Creates an equivalent tree observed at another timestamp.
@@ -326,7 +330,8 @@ public abstract sealed class BinomialModel implements Greeks permits LeisenReime
      * @param newTimestampNanos replacement timestamp in nanoseconds since the UNIX epoch
      * @return newly constructed tree at the requested timestamp
      */
-    protected abstract BinomialModel withTimestamp(long newTimestampNanos);
+    @Override
+    public abstract BinomialModel withTimestamp(long newTimestampNanos);
 
     @Override
     public double charm() {
