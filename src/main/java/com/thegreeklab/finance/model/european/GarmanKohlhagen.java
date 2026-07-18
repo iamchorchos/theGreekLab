@@ -4,6 +4,7 @@ import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.FXFrame;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 /**
  * Garman-Kohlhagen pricing model for European FX options.
@@ -28,12 +29,18 @@ public final class GarmanKohlhagen extends BlackScholes {
      * @param contract   the option contract being priced
      * @param frame      FX market data (spot exchange rate, domestic and foreign rates)
      * @param volatility annualized volatility of the FX rate, as a decimal
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws InvalidVolatilityException        if {@code volatility} is below {@code 1e-6}
      *                                           or is not finite
      * @throws UnsupportedExerciseStyleException if {@code contract} is not European
      */
-    public GarmanKohlhagen(OptionContract contract, FXFrame frame, double volatility) {
-        super(contract, frame, volatility);
+    public GarmanKohlhagen(
+            OptionContract contract,
+            FXFrame frame,
+            double volatility,
+            DayCountConvention dayCountConvention
+    ) {
+        super(contract, frame, volatility, dayCountConvention);
     }
 
     /**

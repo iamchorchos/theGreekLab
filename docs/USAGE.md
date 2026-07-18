@@ -23,6 +23,28 @@ The library separates option contracts from market data.
 - `FuturesFrame` for futures options
 - `FXFrame` for currency options
 
+### Expiration and day count
+
+Version 2 represents contract expiration only through
+`OptionContract.expirationDate()`. Do not precompute an epoch timestamp or a
+year denominator when constructing a contract.
+
+Every contract-based pricing engine and implied-volatility calculation requires
+the caller to select `DayCountConvention.ACT_365F` or
+`DayCountConvention.ACT_360`. There is no day-count default and the setting is
+preserved by immutable bumped copies.
+
+For ACT/365F:
+
+```math
+T = \frac{t_{expiry} - t_{valuation}}{365 \cdot 86\,400}
+```
+
+The numerator is actual elapsed time in seconds. Consequently, an interval
+containing 366 actual days has a year fraction of `366 / 365`. At and after
+expiration, time to expiry is floored at zero. ACT/360 uses the same actual
+elapsed time with a fixed 360-day denominator.
+
 ## Supported Greeks
 
 The `StandardGreeks` interface exposes:
@@ -69,6 +91,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -92,7 +115,9 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-BlackScholesMerton model = new BlackScholesMerton(call, frame, 0.22);
+BlackScholesMerton model = new BlackScholesMerton(
+        call, frame, 0.22, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -113,6 +138,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.FXFrame;
 import com.thegreeklab.finance.model.european.GarmanKohlhagen;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -136,7 +162,9 @@ FXFrame frame = new FXFrame(
         0.032
 );
 
-GarmanKohlhagen model = new GarmanKohlhagen(fxCall, frame, 0.115);
+GarmanKohlhagen model = new GarmanKohlhagen(
+        fxCall, frame, 0.115, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -152,6 +180,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.FuturesFrame;
 import com.thegreeklab.finance.model.european.Black76;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -174,7 +203,9 @@ FuturesFrame frame = new FuturesFrame(
         0.042
 );
 
-Black76 model = new Black76(futuresPut, frame, 0.185);
+Black76 model = new Black76(
+        futuresPut, frame, 0.185, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -190,6 +221,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.american.binomial.CoxRossRubenstein;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -213,7 +245,9 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-CoxRossRubenstein model = new CoxRossRubenstein(put, frame, 0.22, 301);
+CoxRossRubenstein model = new CoxRossRubenstein(
+        put, frame, 0.22, 301, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -230,6 +264,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.american.binomial.LeisenReimer;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -253,7 +288,9 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-LeisenReimer model = new LeisenReimer(call, frame, 0.22, 301);
+LeisenReimer model = new LeisenReimer(
+        call, frame, 0.22, 301, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -275,6 +312,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.american.trinomial.TrinomialTree;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -298,7 +336,9 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-TrinomialTree model = new TrinomialTree(put, frame, 0.22, 301);
+TrinomialTree model = new TrinomialTree(
+        put, frame, 0.22, 301, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -345,6 +385,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.american.approximations.BjerksundStensland;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -368,7 +409,9 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-BjerksundStensland model = new BjerksundStensland(put, frame, 0.22);
+BjerksundStensland model = new BjerksundStensland(
+        put, frame, 0.22, DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
@@ -451,6 +494,7 @@ distribution, `LICENSING.md` for the component-level explanation, and
 
 ```java
 import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.finance.time.DayCountConvention;
 import org.eclipse.collections.api.list.primitive.DoubleList;
 import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 
@@ -512,7 +556,9 @@ EquityFrame frame = new EquityFrame(
 double marketPrice = 8.50;
 
 var impliedVolatility =
-        VolatilityCalculator.impliedVolatility(contract, frame, marketPrice);
+        VolatilityCalculator.impliedVolatility(
+                contract, frame, marketPrice, DayCountConvention.ACT_365F
+        );
 ```
 
 The implied volatility solver supports European options.

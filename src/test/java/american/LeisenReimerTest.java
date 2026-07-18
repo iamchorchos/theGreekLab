@@ -9,7 +9,6 @@ import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.exception.UnsupportedFrameTypeException;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.frame.FuturesFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.binomial.LeisenReimer;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class LeisenReimerTest {
 
@@ -32,7 +32,7 @@ class LeisenReimerTest {
 
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> new LeisenReimer(contract, frame, Double.NaN, 101)
+                () -> new LeisenReimer(contract, frame, Double.NaN, 101, ACT_365F)
         );
     }
 
@@ -44,7 +44,7 @@ class LeisenReimerTest {
 
         assertThrows(
                 InvalidStepCountException.class,
-                () -> new LeisenReimer(contract, frame, 0.2, 100)
+                () -> new LeisenReimer(contract, frame, 0.2, 100, ACT_365F)
         );
     }
 
@@ -56,7 +56,7 @@ class LeisenReimerTest {
 
         assertThrows(
                 UnsupportedFrameTypeException.class,
-                () -> new LeisenReimer(contract, frame, 0.2, 101)
+                () -> new LeisenReimer(contract, frame, 0.2, 101, ACT_365F)
         );
     }
 
@@ -68,7 +68,7 @@ class LeisenReimerTest {
 
         assertThrows(
                 UnsupportedExerciseStyleException.class,
-                () -> new LeisenReimer(contract, frame, 0.2, 101)
+                () -> new LeisenReimer(contract, frame, 0.2, 101, ACT_365F)
         );
     }
 
@@ -79,8 +79,8 @@ class LeisenReimerTest {
         OptionContract europeanCall = contract(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double leisenReimerPrice = new LeisenReimer(americanCall, frame, 0.2, 101).price();
-        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2).price();
+        double leisenReimerPrice = new LeisenReimer(americanCall, frame, 0.2, 101, ACT_365F).price();
+        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2, ACT_365F).price();
 
         assertEquals(blackScholesPrice, leisenReimerPrice, 0.02);
     }
@@ -93,9 +93,7 @@ class LeisenReimerTest {
                 option,
                 100.0,
                 expiry,
-                100,
-                MarketData.toEpochNanos(expiry),
-                SECONDS_IN_YEAR
+                100
         );
     }
 }

@@ -15,6 +15,7 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class BlackScholesValidationTest {
 
@@ -26,11 +27,27 @@ class BlackScholesValidationTest {
 
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> new BlackScholesMerton(contract, frame, Double.NaN)
+                () -> new BlackScholesMerton(contract, frame, Double.NaN, ACT_365F)
         );
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> new BlackScholesMerton(contract, frame, Double.POSITIVE_INFINITY)
+                () -> new BlackScholesMerton(contract, frame, Double.POSITIVE_INFINITY, ACT_365F)
+        );
+    }
+
+    @Test
+    void rejectsNullConvention() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        OptionContract contract = contract(now);
+        EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
+
+        assertThrows(
+                NullPointerException.class,
+                () -> new BlackScholesMerton(contract, frame, 0.2, null)
+        );
+        assertThrows(
+                NullPointerException.class,
+                () -> BlackScholes.price(contract, frame, 0.2, null)
         );
     }
 
@@ -42,11 +59,11 @@ class BlackScholesValidationTest {
 
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> BlackScholes.price(contract, frame, Double.NaN)
+                () -> BlackScholes.price(contract, frame, Double.NaN, ACT_365F)
         );
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> BlackScholes.price(contract, frame, Double.NEGATIVE_INFINITY)
+                () -> BlackScholes.price(contract, frame, Double.NEGATIVE_INFINITY, ACT_365F)
         );
     }
 
@@ -58,7 +75,7 @@ class BlackScholesValidationTest {
 
         assertThrows(
                 UnsupportedExerciseStyleException.class,
-                () -> BlackScholes.price(contract, frame, 0.2)
+                () -> BlackScholes.price(contract, frame, 0.2, ACT_365F)
         );
     }
 
@@ -70,7 +87,7 @@ class BlackScholesValidationTest {
 
         assertThrows(
                 UnsupportedExerciseStyleException.class,
-                () -> new BlackScholesMerton(contract, frame, 0.2)
+                () -> new BlackScholesMerton(contract, frame, 0.2, ACT_365F)
         );
     }
 
@@ -79,7 +96,7 @@ class BlackScholesValidationTest {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = contract(now);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.01);
-        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
+        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2, ACT_365F);
 
         assertTrue(Double.isFinite(option.epsilon()));
     }

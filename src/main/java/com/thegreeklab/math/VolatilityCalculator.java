@@ -9,10 +9,12 @@ import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.european.BlackScholes;
+import com.thegreeklab.finance.time.DayCountConvention;
 import net.jafama.FastMath;
 import org.eclipse.collections.api.list.primitive.DoubleList;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.OptionalDouble;
 
 /**
@@ -150,6 +152,7 @@ public final class VolatilityCalculator {
      * @param contract    the option contract whose implied volatility is sought
      * @param frame       the market data snapshot (spot, rate, cost-of-carry) to price against
      * @param marketPrice the observed market price of the option
+     * @param dayCountConvention convention used to derive the year fraction
      * @return the implied volatility as a decimal, or {@link OptionalDouble#empty()}
      * if {@code contract} has already expired, the price is outside arbitrage bounds,
      * or the solver fails to converge
@@ -157,12 +160,23 @@ public final class VolatilityCalculator {
      *                                   is not strictly positive and finite
      * @throws UnsupportedExerciseStyleException if {@code contract} is not European
      */
-    public static OptionalDouble impliedVolatility(OptionContract contract, MarketData frame, double marketPrice) {
+    public static OptionalDouble impliedVolatility(
+            OptionContract contract,
+            MarketData frame,
+            double marketPrice,
+            DayCountConvention dayCountConvention
+    ) {
+        Objects.requireNonNull(contract, "Contract cannot be null.");
+        Objects.requireNonNull(frame, "Market data frame cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
         if (contract.option() != Option.EUROPEAN) {
             throw new UnsupportedExerciseStyleException("Implied volatility solver supports only EUROPEAN options. Received: " + contract.option());
         }
 
-        double timeToExpiry = contract.getTimeToExpiry(frame.timestampNanos());
+        double timeToExpiry = dayCountConvention.timeToExpiry(
+                frame.timestampNanos(),
+                contract.expirationDate()
+        );
         if (timeToExpiry <= 0) return OptionalDouble.empty();
 
         validatePositiveFinitePrice(frame.spotPrice(), "Spot price");
@@ -186,16 +200,28 @@ public final class VolatilityCalculator {
         double guess = (marketPrice / frame.spotPrice()) * FastMath.sqrt(2 * Math.PI / timeToExpiry);
         guess = Math.min(Math.max(guess, MIN_VOLATILITY_BOUND + VOLATILITY_EPSILON), MAX_VOLATILITY_BOUND - VOLATILITY_EPSILON);
 
-        double fLo = priceError(contract, frame, MIN_VOLATILITY_BOUND, marketPrice);
-        double fGuess = priceError(contract, frame, guess, marketPrice);
-        double fHi = priceError(contract, frame, MAX_VOLATILITY_BOUND, marketPrice);
+        double fLo = priceError(
+                contract, frame, MIN_VOLATILITY_BOUND, marketPrice, dayCountConvention
+        );
+        double fGuess = priceError(contract, frame, guess, marketPrice, dayCountConvention);
+        double fHi = priceError(
+                contract, frame, MAX_VOLATILITY_BOUND, marketPrice, dayCountConvention
+        );
 
         if (fLo * fHi > 0) return OptionalDouble.empty();
 
         if (fLo * fGuess <= 0)
-            return brent(contract, frame, marketPrice, MIN_VOLATILITY_BOUND, guess, fLo, fGuess, BRENT_TOLERANCE, BRENT_MAX_ITERATIONS);
+            return brent(
+                    contract, frame, marketPrice, dayCountConvention,
+                    MIN_VOLATILITY_BOUND, guess, fLo, fGuess,
+                    BRENT_TOLERANCE, BRENT_MAX_ITERATIONS
+            );
         else
-            return brent(contract, frame, marketPrice, guess, MAX_VOLATILITY_BOUND, fGuess, fHi, BRENT_TOLERANCE, BRENT_MAX_ITERATIONS);
+            return brent(
+                    contract, frame, marketPrice, dayCountConvention,
+                    guess, MAX_VOLATILITY_BOUND, fGuess, fHi,
+                    BRENT_TOLERANCE, BRENT_MAX_ITERATIONS
+            );
     }
 
     /**
@@ -208,10 +234,17 @@ public final class VolatilityCalculator {
      * @param frame       the market data snapshot to price against
      * @param vol         the trial volatility
      * @param marketPrice the observed market price being matched
+     * @param dayCountConvention convention used to derive the year fraction
      * @return {@code BlackScholes.price(contract, frame, vol) - marketPrice}
      */
-    private static double priceError(OptionContract contract, MarketData frame, double vol, double marketPrice) {
-        return BlackScholes.price(contract, frame, vol) - marketPrice;
+    private static double priceError(
+            OptionContract contract,
+            MarketData frame,
+            double vol,
+            double marketPrice,
+            DayCountConvention dayCountConvention
+    ) {
+        return BlackScholes.price(contract, frame, vol, dayCountConvention) - marketPrice;
     }
 
     private static void validatePositiveFinitePrice(double price, String label) {
@@ -229,6 +262,7 @@ public final class VolatilityCalculator {
      * @param contract    the option contract being priced
      * @param frame       the market data snapshot to price against
      * @param marketPrice the observed market price being matched
+     * @param dayCountConvention convention used to derive the year fraction
      * @param a           lower bracket bound (volatility)
      * @param b           upper bracket bound (volatility); the current best estimate
      * @param fa          {@code priceError} evaluated at {@code a}
@@ -239,7 +273,8 @@ public final class VolatilityCalculator {
      * {@link OptionalDouble#empty()} if {@code maxIter} is exceeded without convergence
      */
     private static OptionalDouble brent(OptionContract contract, MarketData frame,
-                                        double marketPrice, double a, double b,
+                                        double marketPrice, DayCountConvention dayCountConvention,
+                                        double a, double b,
                                         double fa, double fb, double tol, int maxIter) {
         double c = a, fc = fa;
         double d = b - a, e = d;
@@ -296,7 +331,7 @@ public final class VolatilityCalculator {
             a = b;
             fa = fb;
             b += (Math.abs(d) > tol1) ? d : Math.copySign(tol1, xm);
-            fb = priceError(contract, frame, b, marketPrice);
+            fb = priceError(contract, frame, b, marketPrice, dayCountConvention);
         }
 
         return OptionalDouble.empty();

@@ -7,6 +7,7 @@ import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.model.greeks.Greeks;
+import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.ERF;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -56,6 +57,7 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
     private final double calculationTimeToExpiry;
     private final boolean expired;
     private final OptionType type;
+    private final DayCountConvention dayCountConvention;
 
     private final double sqrtT;   // sqrt(time)
     private final double volSq;   // sigma^2
@@ -80,6 +82,7 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      *                   rate and cost-of-carry {@code b}
      * @param volatility annualized volatility as a decimal (e.g. {@code 0.20} for 20%);
      *                   must be finite and strictly above {@code 1e-6}
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws NullPointerException              if {@code contract} or {@code frame} is {@code null}
      * @throws InvalidVolatilityException        if {@code volatility} is below {@code 1e-6}
      *                                           or is not finite
@@ -87,9 +90,15 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      *                                           {@link Option#EUROPEAN}
      */
     @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "Fail-fast validation protects immutable model invariants before any instance escapes.")
-    public BlackScholes(OptionContract contract, MarketData frame, double volatility) {
+    public BlackScholes(
+            OptionContract contract,
+            MarketData frame,
+            double volatility,
+            DayCountConvention dayCountConvention
+    ) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
         PricingValidation.requireValidVolatility(volatility);
         validateEuropeanContract(contract);
 
@@ -99,14 +108,18 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
         this.riskFreeRate = frame.riskFreeRate();
         this.volatility = volatility;
         this.type = contract.type();
+        this.dayCountConvention = dayCountConvention;
 
         this.volSq = volatility * volatility;
 
-        this.rawTimeToExpiry = contract.getTimeToExpiry(frame.timestampNanos());
+        this.rawTimeToExpiry = dayCountConvention.timeToExpiry(
+                frame.timestampNanos(),
+                contract.expirationDate()
+        );
         this.expired = this.rawTimeToExpiry <= 0.0;
         this.calculationTimeToExpiry = FastMath.max(
                 this.rawTimeToExpiry,
-                1.0 / contract.secondsInExpirationYear()
+                1.0 / dayCountConvention.secondsPerYear()
         );
 
         if (this.expired) {
@@ -150,6 +163,7 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      *                   rate and cost-of-carry {@code b}
      * @param volatility annualized volatility as a decimal; must be finite and
      *                   strictly above {@code 1e-6}
+     * @param dayCountConvention convention used to derive the year fraction
      * @return the theoretical fair value of the option, or its intrinsic value if
      * {@code contract} has already expired
      * @throws NullPointerException              if {@code contract} or {@code frame} is {@code null}
@@ -158,13 +172,19 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      * @throws UnsupportedExerciseStyleException if {@code contract.option()} is not
      *                                           {@link Option#EUROPEAN}
      */
-    public static double price(OptionContract contract, MarketData frame, double volatility) {
+    public static double price(
+            OptionContract contract,
+            MarketData frame,
+            double volatility,
+            DayCountConvention dayCountConvention
+    ) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
         PricingValidation.requireValidVolatility(volatility);
         validateEuropeanContract(contract);
 
-        double t = contract.getTimeToExpiry(frame.timestampNanos());
+        double t = dayCountConvention.timeToExpiry(frame.timestampNanos(), contract.expirationDate());
         return computePrice(
                 contract.type(),
                 frame.spotPrice(),
@@ -286,6 +306,15 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      */
     public double timeToExpiry() {
         return rawTimeToExpiry;
+    }
+
+    /**
+     * Returns the convention used to derive this model's year fraction.
+     *
+     * @return explicitly selected day-count convention
+     */
+    public DayCountConvention dayCountConvention() {
+        return dayCountConvention;
     }
 
     /**

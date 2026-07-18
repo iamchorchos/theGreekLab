@@ -86,17 +86,30 @@ the native CDF should enable native access for the unnamed module:
 
 ## Releases
 
-Published versions are available from
-[GitHub Releases](https://github.com/iamchorchos/theGreekLab/releases). New
-semantic-version tags such as `v1.0.2` are verified automatically and publish:
+Starting with version 2.0.0, releases are published to Maven Central under
+`io.github.iamchorchos:thegreeklab` and remain available from
+[GitHub Releases](https://github.com/iamchorchos/theGreekLab/releases).
 
-- the compiled library JAR,
+After 2.0.0 is released, add the library to a Maven project with:
+
+```xml
+<dependency>
+    <groupId>io.github.iamchorchos</groupId>
+    <artifactId>thegreeklab</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+New semantic-version tags such as `v2.0.0` are verified automatically and
+publish:
+
+- signed Maven artifacts to Maven Central,
+- the compiled library JAR on GitHub Releases,
 - source and Javadoc JARs,
 - SHA-256 checksums for every artifact.
 
-The project is not currently published to Maven Central. For development from
-source, use the Maven wrapper; for a released build, download the versioned JAR
-and verify it against `SHA256SUMS`.
+Maintainer setup and release instructions are documented in
+[docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Running Tests
 
@@ -124,6 +137,27 @@ To run all verification checks and generate the JaCoCo coverage report:
 The local HTML report is written to `target/site/jacoco/index.html`. The build
 requires at least 85% line coverage and 65% branch coverage. CI also archives
 the complete report and uploads `jacoco.xml` to Codacy.
+
+After a release is available from Maven Central, compare the current public and
+protected API with that explicit baseline using japicmp:
+
+Windows PowerShell:
+
+```powershell
+.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.0.0"
+```
+
+Linux/macOS:
+
+```bash
+./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.0.0
+```
+
+The compatibility profile fails on binary- or source-incompatible changes and
+writes its reports to `target/japicmp`. Keeping the baseline version explicit
+makes local and CI results reproducible. Enable this profile in CI after the
+first `2.x` artifact has been published; the intentional `1.x` to `2.x` API
+migration is the bootstrap boundary.
 
 ## Benchmarks
 
@@ -172,6 +206,7 @@ The project is configured with:
 - JUnit 5 test suite
 - JaCoCo XML and HTML coverage reports
 - SpotBugs during `mvn verify`
+- japicmp binary and source API checks against an explicit released baseline
 - Codacy coverage and quality monitoring
 - GitHub Actions CI in `.github/workflows/ci.yml`
 - reproducible release artifacts from `.github/workflows/release.yml`
@@ -188,6 +223,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
+import com.thegreeklab.finance.time.DayCountConvention;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -211,13 +247,28 @@ EquityFrame frame = new EquityFrame(
         0.005
 );
 
-BlackScholesMerton model = new BlackScholesMerton(call, frame, 0.22);
+BlackScholesMerton model = new BlackScholesMerton(
+        call,
+        frame,
+        0.22,
+        DayCountConvention.ACT_365F
+);
 
 double price = model.price();
 double delta = model.delta();
 double gamma = model.gamma();
 double vega = model.vega();
 ```
+
+### Version 2 time model
+
+`OptionContract` stores expiration exactly once as a `ZonedDateTime`. Every
+contract-based model explicitly selects a `DayCountConvention`, currently
+`ACT_365F` or `ACT_360`; day count has no process-global or environment-based
+default.
+The v1 constructor parameters `expirationNanosEpoch` and
+`secondsInExpirationYear` have been removed, eliminating contradictory
+expiration metadata.
 
 Full examples for every supported model and volatility utility are available in
 [docs/USAGE.md](docs/USAGE.md).
@@ -226,6 +277,8 @@ Full examples for every supported model and volatility utility are available in
 
 - [Usage guide](docs/USAGE.md)
 - [Mathematical notes](docs/MATH.md)
+- [Publishing guide](docs/PUBLISHING.md)
+- [Changelog](CHANGELOG.md)
 - [Contributing guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 

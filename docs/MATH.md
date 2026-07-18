@@ -17,6 +17,22 @@ Notation:
 - $n(x)$ - standard normal PDF
 - $\Delta t = T / N$ - binomial time step
 
+## Time To Expiry
+
+Every model requires an explicit day-count convention. If $t_v$ is the
+market-data valuation timestamp, $t_e$ is the contract expiration timestamp
+and $D$ is the selected fixed year denominator, then:
+
+```math
+T = \max\left(\frac{t_e - t_v}{D \cdot 86\,400}, 0\right)
+```
+
+The difference is measured in actual elapsed seconds, including the time of
+day. `DayCountConvention.ACT_365F` uses $D=365$ and
+`DayCountConvention.ACT_360` uses $D=360$; neither denominator changes for a
+leap year. `OptionContract` stores only the zoned expiration date, while the
+caller selects the convention for each valuation.
+
 ## Cost Of Carry
 
 The generalized Black-Scholes engine uses a cost-of-carry parameter $b$:
@@ -249,10 +265,10 @@ Put:
 + rK e^{-rT}N(-d_2)
 ```
 
-Daily theta:
+Daily theta under the selected fixed-denominator convention:
 
 ```math
-\Theta_{\text{daily}} = \frac{\Theta}{365}
+\Theta_{\text{daily}} = \frac{\Theta}{D}
 ```
 
 ### Epsilon

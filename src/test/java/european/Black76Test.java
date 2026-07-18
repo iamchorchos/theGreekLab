@@ -13,6 +13,7 @@ import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class Black76Test {
 
@@ -24,18 +25,13 @@ class Black76Test {
         double tYears = 1.25;
         long nanosToExpiry = (long) (tYears * 365.0 * 86_400.0 * 1_000_000_000L);
         ZonedDateTime expiry = now.plusNanos(nanosToExpiry);
-        long expiryEpochNanos = expiry.toInstant().getEpochSecond() * 1_000_000_000L + expiry.getNano();
-        double secondsInYear = 365.0 * 86_400.0;
-
         OptionContract callContract = new OptionContract(
                 "FUT",
                 OptionType.CALL,
                 Option.EUROPEAN,
                 95.0,
                 expiry,
-                1,
-                expiryEpochNanos,
-                secondsInYear
+                1
         );
         OptionContract putContract = new OptionContract(
                 "FUT",
@@ -43,14 +39,12 @@ class Black76Test {
                 Option.EUROPEAN,
                 95.0,
                 expiry,
-                1,
-                expiryEpochNanos,
-                secondsInYear
+                1
         );
 
         FuturesFrame frame = new FuturesFrame(now, 100.0, 0.04);
-        Black76 call = new Black76(callContract, frame, 0.25);
-        Black76 put = new Black76(putContract, frame, 0.25);
+        Black76 call = new Black76(callContract, frame, 0.25, ACT_365F);
+        Black76 put = new Black76(putContract, frame, 0.25, ACT_365F);
 
         assertAll(
                 () -> assertEquals(-call.timeToExpiry() * call.price(), call.rho(), TOLERANCE),
@@ -70,7 +64,7 @@ class Black76Test {
                 1
         );
         FuturesFrame frame = new FuturesFrame(now, 100.0, 0.04);
-        Black76 option = new Black76(contract, frame, 0.25);
+        Black76 option = new Black76(contract, frame, 0.25, ACT_365F);
 
         assertThrows(UnsupportedOperationException.class, option::epsilon);
     }

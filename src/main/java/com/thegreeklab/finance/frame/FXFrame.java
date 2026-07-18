@@ -2,6 +2,7 @@ package com.thegreeklab.finance.frame;
 
 import com.thegreeklab.finance.exception.InvalidRateException;
 import com.thegreeklab.finance.exception.NonPositivePriceException;
+import com.thegreeklab.finance.time.EpochNanos;
 
 import java.time.ZonedDateTime;
 
@@ -53,7 +54,7 @@ public record FXFrame(
      */
     public FXFrame(ZonedDateTime timestamp, double spotPrice, double domesticRate, double foreignRate) {
         this(
-                MarketData.toEpochNanos(timestamp),
+                EpochNanos.from(timestamp),
                 spotPrice,
                 domesticRate,
                 foreignRate

@@ -5,10 +5,10 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.frame.FuturesFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.approximations.BjerksundStensland;
 import com.thegreeklab.finance.model.european.BlackScholes;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
+import com.thegreeklab.finance.time.EpochNanos;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,6 +16,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_360;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -98,12 +100,13 @@ class BjerksundStenslandTest {
     @Test
     void rejectsNullInputs() {
         ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.CALL, 100.0, valuationTime.plusYears(1));
+        OptionContract contract = contract(OptionType.CALL, valuationTime.plusYears(1));
         EquityFrame frame = new EquityFrame(valuationTime, 100.0, 0.05, 0.02);
 
         assertAll(
-                () -> assertThrows(NullPointerException.class, () -> new BjerksundStensland(null, frame, 0.20)),
-                () -> assertThrows(NullPointerException.class, () -> new BjerksundStensland(contract, null, 0.20))
+                () -> assertThrows(NullPointerException.class, () -> new BjerksundStensland(null, frame, 0.20, ACT_365F)),
+                () -> assertThrows(NullPointerException.class, () -> new BjerksundStensland(contract, null, 0.20, ACT_365F)),
+                () -> assertThrows(NullPointerException.class, () -> new BjerksundStensland(contract, frame, 0.20, null))
         );
     }
 
@@ -132,13 +135,15 @@ class BjerksundStenslandTest {
         double dividendYield = 5e-9;
         double volatility = 0.20;
 
-        OptionContract contract = contract(OptionType.CALL, 100.0, expiry);
+        OptionContract contract = contract(OptionType.CALL, expiry);
         EquityFrame frame = new EquityFrame(valuationTime, 100.0, riskFreeRate, dividendYield);
-        double americanPrice = new BjerksundStensland(contract, frame, volatility).price();
+        double americanPrice = new BjerksundStensland(
+                contract, frame, volatility, ACT_365F
+        ).price();
         double europeanPrice = BlackScholes.callPrice(
                 frame.spotPrice(),
                 contract.strikePrice(),
-                contract.getTimeToExpiry(frame.timestampNanos()),
+                ACT_365F.timeToExpiry(frame.timestampNanos(), contract.expirationDate()),
                 frame.riskFreeRate(),
                 frame.costOfCarry(),
                 volatility
@@ -271,7 +276,7 @@ class BjerksundStenslandTest {
         EquityFrame frame = new EquityFrame(valuationTime, 100.0, 0.05, 0.0);
         double volatility = 0.20;
 
-        OptionContract americanContract = contract(OptionType.CALL, 100.0, expiry);
+        OptionContract americanContract = contract(OptionType.CALL, expiry);
         OptionContract europeanContract = new OptionContract(
                 "TEST",
                 OptionType.CALL,
@@ -281,8 +286,12 @@ class BjerksundStenslandTest {
                 100
         );
 
-        BjerksundStensland american = new BjerksundStensland(americanContract, frame, volatility);
-        BlackScholesMerton european = new BlackScholesMerton(europeanContract, frame, volatility);
+        BjerksundStensland american = new BjerksundStensland(
+                americanContract, frame, volatility, ACT_365F
+        );
+        BlackScholesMerton european = new BlackScholesMerton(
+                europeanContract, frame, volatility, ACT_365F
+        );
 
         assertAll(
                 () -> assertEquals(european.delta(), american.delta(), 1e-6),
@@ -296,25 +305,30 @@ class BjerksundStenslandTest {
     @Test
     void americanGreeksAreFinite() {
         ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.CALL, 100.0, valuationTime.plusYears(1));
+        OptionContract contract = contract(OptionType.CALL, valuationTime.plusYears(1));
         EquityFrame frame = new EquityFrame(valuationTime, 100.0, 0.05, 0.08);
-        BjerksundStensland model = new BjerksundStensland(contract, frame, 0.20);
+        BjerksundStensland model = new BjerksundStensland(
+                contract, frame, 0.20, ACT_360
+        );
 
         assertAll(
                 () -> assertTrue(Double.isFinite(model.delta())),
                 () -> assertTrue(Double.isFinite(model.gamma())),
                 () -> assertTrue(Double.isFinite(model.vega())),
                 () -> assertTrue(Double.isFinite(model.theta())),
-                () -> assertTrue(Double.isFinite(model.rho()))
+                () -> assertTrue(Double.isFinite(model.rho())),
+                () -> assertEquals(ACT_360, model.withSpot(101.0).dayCountConvention())
         );
     }
 
     @Test
     void snapshotMatchesIndividualGreeks() {
         ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
-        OptionContract contract = contract(OptionType.PUT, 100.0, valuationTime.plusYears(1));
+        OptionContract contract = contract(OptionType.PUT, valuationTime.plusYears(1));
         EquityFrame frame = new EquityFrame(valuationTime, 95.0, 0.05, 0.03);
-        BjerksundStensland model = new BjerksundStensland(contract, frame, 0.25);
+        BjerksundStensland model = new BjerksundStensland(
+                contract, frame, 0.25, ACT_365F
+        );
         var values = model.greeks();
 
         assertAll(
@@ -333,9 +347,10 @@ class BjerksundStenslandTest {
             double spot
     ) {
         return new BjerksundStensland(
-                contract(type, 100.0, expiry),
+                contract(type, expiry),
                 new EquityFrame(expiry, spot, 0.05, 0.02),
-                0.20
+                0.20,
+                ACT_365F
         );
     }
 
@@ -346,24 +361,23 @@ class BjerksundStenslandTest {
             double futuresPrice
     ) {
         ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
-        long valuationNanos = MarketData.toEpochNanos(valuationTime);
+        long valuationNanos = EpochNanos.from(valuationTime);
         long expiryNanos = Math.addExact(
                 valuationNanos,
                 Math.round(timeToExpiry * SECONDS_PER_YEAR * 1_000_000_000.0)
         );
+        ZonedDateTime expiry = EpochNanos.toUtc(expiryNanos);
         OptionContract contract = new OptionContract(
                 "TEST",
                 type,
                 Option.AMERICAN,
                 100.0,
-                valuationTime.plusYears(1),
-                100,
-                expiryNanos,
-                SECONDS_PER_YEAR
+                expiry,
+                100
         );
         FuturesFrame frame = new FuturesFrame(valuationNanos, futuresPrice, 0.1);
 
-        return new BjerksundStensland(contract, frame, volatility).price();
+        return new BjerksundStensland(contract, frame, volatility, ACT_365F).price();
     }
 
     private static double equityPrice(
@@ -376,27 +390,27 @@ class BjerksundStenslandTest {
             double volatility
     ) {
         ZonedDateTime valuationTime = ZonedDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
-        long valuationNanos = MarketData.toEpochNanos(valuationTime);
+        long valuationNanos = EpochNanos.from(valuationTime);
         long expiryNanos = Math.addExact(
                 valuationNanos,
                 Math.round(timeToExpiry * SECONDS_PER_YEAR * 1_000_000_000.0)
         );
+        ZonedDateTime expiry = EpochNanos.toUtc(expiryNanos);
         OptionContract contract = new OptionContract(
                 "TEST",
                 type,
                 Option.AMERICAN,
                 strike,
-                valuationTime.plusYears(5),
-                100,
-                expiryNanos,
-                SECONDS_PER_YEAR
+                expiry,
+                100
         );
         EquityFrame frame = new EquityFrame(valuationNanos, spot, riskFreeRate, dividendYield);
 
-        return new BjerksundStensland(contract, frame, volatility).price();
+        return new BjerksundStensland(contract, frame, volatility, ACT_365F).price();
     }
 
-    private static OptionContract contract(OptionType type, double strike, ZonedDateTime expiry) {
-        return new OptionContract("TEST", type, Option.AMERICAN, strike, expiry, 100);
+    private static OptionContract contract(OptionType type, ZonedDateTime expiry) {
+        return new OptionContract("TEST", type, Option.AMERICAN, 100.0, expiry, 100);
     }
+
 }

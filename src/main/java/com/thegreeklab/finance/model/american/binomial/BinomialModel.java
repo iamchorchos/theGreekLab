@@ -7,6 +7,7 @@ import com.thegreeklab.finance.exception.*;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
 import com.thegreeklab.finance.model.greeks.Greeks;
+import com.thegreeklab.finance.time.DayCountConvention;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.jafama.FastMath;
 
@@ -43,6 +44,8 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
     protected final OptionContract contract;
     /** Immutable market-data snapshot used by this tree. */
     protected final MarketData frame;
+    /** Convention used to convert elapsed time into a year fraction. */
+    protected final DayCountConvention dayCountConvention;
     /** Numerical floor used by finite-difference calculations. */
     protected static final double EPSILON = 1e-6;
 
@@ -73,11 +76,18 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
      * @param frame    market data snapshot supplying spot, rate and cost of carry
      * @param steps    positive tree depth; higher values usually improve accuracy
      *                 at the cost of runtime
+     * @param dayCountConvention convention used to derive the year fraction
      */
     @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "Fail-fast validation protects immutable tree invariants before any instance escapes.")
-    public BinomialModel(OptionContract contract, MarketData frame, int steps) {
+    public BinomialModel(
+            OptionContract contract,
+            MarketData frame,
+            int steps,
+            DayCountConvention dayCountConvention
+    ) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
         requireValidSteps(steps);
         requireAmericanStyle(contract);
 
@@ -87,14 +97,21 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
         this.k = contract.strikePrice();
         this.r = frame.riskFreeRate();
         this.costOfCarry = frame.costOfCarry();
-        double timeToExpiry = contract.getTimeToExpiry(frame.timestampNanos());
+        double timeToExpiry = dayCountConvention.timeToExpiry(
+                frame.timestampNanos(),
+                contract.expirationDate()
+        );
         if (timeToExpiry <= 0) {
             throw new ExpiredContractException("Cannot construct tree for expired or non-positive TTE contract.");
         }
         this.dt = timeToExpiry / steps;
         this.contract = contract;
         this.frame = frame;
-        this.tNow = this.contract.getTimeToExpiry(this.frame.timestampNanos());
+        this.dayCountConvention = dayCountConvention;
+        this.tNow = dayCountConvention.timeToExpiry(
+                this.frame.timestampNanos(),
+                this.contract.expirationDate()
+        );
     }
 
 
@@ -136,7 +153,10 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
 
     private double timeBumpDerivative(java.util.function.ToDoubleFunction<BinomialModel> metric) {
         long bumpNanos = (tNow > MIN_TIME_FRACTION) ? ONE_DAY_NANOS : ONE_DAY_NANOS / 2;
-        double tBumped = this.contract.getTimeToExpiry(this.frame.timestampNanos() + bumpNanos);
+        double tBumped = dayCountConvention.timeToExpiry(
+                this.frame.timestampNanos() + bumpNanos,
+                this.contract.expirationDate()
+        );
         double dtYears = tNow - tBumped;
 
         if (dtYears <= 0) {
@@ -146,6 +166,11 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
         double valueNow = metric.applyAsDouble(this);
         double valueBumped = metric.applyAsDouble(withTimestamp(this.frame.timestampNanos() + bumpNanos));
         return (valueBumped - valueNow) / dtYears;
+    }
+
+    @Override
+    public final DayCountConvention dayCountConvention() {
+        return dayCountConvention;
     }
 
     /**

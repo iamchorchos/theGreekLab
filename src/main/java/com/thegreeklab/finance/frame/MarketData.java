@@ -1,9 +1,5 @@
 package com.thegreeklab.finance.frame;
 
-import com.thegreeklab.finance.exception.InvalidDateException;
-
-import java.time.ZonedDateTime;
-
 /**
  * Common market-data contract consumed by the generalized Black-Scholes-Merton
  * pricing engine ({@code BlackScholes}).
@@ -80,22 +76,4 @@ public sealed interface MarketData permits FXFrame, EquityFrame, FuturesFrame {
      */
     MarketData withTimestampNanos(long newTimestampNanos);
 
-    /**
-     * Converts a {@link ZonedDateTime} to nanoseconds since the UNIX epoch, as used
-     * by {@link #timestampNanos()} across all {@code MarketData} implementations.
-     *
-     * @param timestamp the timestamp to convert; must not be {@code null}
-     * @return {@code timestamp}, expressed in nanoseconds since the UNIX epoch
-     * @throws InvalidDateException if {@code timestamp} is {@code null}
-     * @throws ArithmeticException  if the conversion overflows a {@code long}
-     */
-    static long toEpochNanos(ZonedDateTime timestamp) {
-        if (timestamp == null) {
-            throw new InvalidDateException("Timestamp cannot be null.");
-        }
-        return Math.addExact(
-                Math.multiplyExact(timestamp.toInstant().getEpochSecond(), 1_000_000_000L),
-                timestamp.getNano()
-        );
-    }
 }

@@ -10,6 +10,7 @@ import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
+import com.thegreeklab.finance.time.DayCountConvention;
 import net.jafama.FastMath;
 
 import java.util.Objects;
@@ -44,6 +45,7 @@ public final class TrinomialTree implements BumpableOptionModel {
     private final int steps;
     private final OptionContract contract;
     private final MarketData frame;
+    private final DayCountConvention dayCountConvention;
     private final TreeResult result;
 
     /**
@@ -53,6 +55,7 @@ public final class TrinomialTree implements BumpableOptionModel {
      * @param frame      immutable market-data snapshot
      * @param volatility annualized volatility as a decimal
      * @param steps      number of time steps in {@code [1, MAX_STEPS]}
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws NullPointerException              if {@code contract} or {@code frame} is {@code null}
      * @throws InvalidVolatilityException        if {@code volatility} is invalid
      * @throws InvalidStepCountException         if {@code steps} is invalid or too small for positive probabilities
@@ -60,15 +63,25 @@ public final class TrinomialTree implements BumpableOptionModel {
      * @throws ExpiredContractException          if the contract has expired
      * @throws MathException                     if transition probabilities are invalid
      */
-    public TrinomialTree(OptionContract contract, MarketData frame, double volatility, int steps) {
+    public TrinomialTree(
+            OptionContract contract,
+            MarketData frame,
+            double volatility,
+            int steps,
+            DayCountConvention dayCountConvention
+    ) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
         requireValidVolatility(volatility);
         requireValidSteps(steps);
         requireSupportedSteps(steps);
         requireNonExoticStyle(contract);
 
-        double timeToExpiry = contract.getTimeToExpiry(frame.timestampNanos());
+        double timeToExpiry = dayCountConvention.timeToExpiry(
+                frame.timestampNanos(),
+                contract.expirationDate()
+        );
         if (timeToExpiry <= 0.0) {
             throw new ExpiredContractException("Cannot construct trinomial tree for an expired contract.");
         }
@@ -89,6 +102,7 @@ public final class TrinomialTree implements BumpableOptionModel {
         this.u = FastMath.exp(volatility * FastMath.sqrt(2.0 * dt));
         this.contract = contract;
         this.frame = frame;
+        this.dayCountConvention = dayCountConvention;
         this.vol = volatility;
         this.pu = calcPUD(DType.U);
         this.pd = calcPUD(DType.D);
@@ -303,7 +317,10 @@ public final class TrinomialTree implements BumpableOptionModel {
             double volatilityDown,
             double bump
     ) {
-        double timeToExpiry = contract.getTimeToExpiry(frame.timestampNanos());
+        double timeToExpiry = dayCountConvention.timeToExpiry(
+                frame.timestampNanos(),
+                contract.expirationDate()
+        );
         int bumpSteps = Math.max(
                 steps,
                 Math.max(
@@ -311,32 +328,51 @@ public final class TrinomialTree implements BumpableOptionModel {
                         minimumRequiredSteps(frameDown.costOfCarry(), timeToExpiry, volatilityDown)
                 )
         );
-        double priceUp = new TrinomialTree(contract, frameUp, volatilityUp, bumpSteps).price();
-        double priceDown = new TrinomialTree(contract, frameDown, volatilityDown, bumpSteps).price();
+        double priceUp = new TrinomialTree(
+                contract, frameUp, volatilityUp, bumpSteps, dayCountConvention
+        ).price();
+        double priceDown = new TrinomialTree(
+                contract, frameDown, volatilityDown, bumpSteps, dayCountConvention
+        ).price();
         return (priceUp - priceDown) / (2.0 * bump);
     }
 
     /** {@inheritDoc} */
     @Override
     public TrinomialTree withSpot(double newSpot) {
-        return new TrinomialTree(contract, frame.withSpotPrice(newSpot), vol, steps);
+        return new TrinomialTree(
+                contract, frame.withSpotPrice(newSpot), vol, steps, dayCountConvention
+        );
     }
 
     /** {@inheritDoc} */
     @Override
     public TrinomialTree withVolatility(double newVolatility) {
-        return new TrinomialTree(contract, frame, newVolatility, steps);
+        return new TrinomialTree(contract, frame, newVolatility, steps, dayCountConvention);
     }
 
     /** {@inheritDoc} */
     @Override
     public TrinomialTree withRiskFreeRate(double newRate) {
-        return new TrinomialTree(contract, frame.withRiskFreeRate(newRate), vol, steps);
+        return new TrinomialTree(
+                contract, frame.withRiskFreeRate(newRate), vol, steps, dayCountConvention
+        );
     }
 
     /** {@inheritDoc} */
     @Override
     public TrinomialTree withTimestamp(long newTimestampNanos) {
-        return new TrinomialTree(contract, frame.withTimestampNanos(newTimestampNanos), vol, steps);
+        return new TrinomialTree(
+                contract,
+                frame.withTimestampNanos(newTimestampNanos),
+                vol,
+                steps,
+                dayCountConvention
+        );
+    }
+
+    @Override
+    public DayCountConvention dayCountConvention() {
+        return dayCountConvention;
     }
 }

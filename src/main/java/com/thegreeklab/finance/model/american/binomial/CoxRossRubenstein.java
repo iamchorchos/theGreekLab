@@ -6,6 +6,7 @@ import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
+import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.validation.PricingValidation;
 import net.jafama.FastMath;
 
@@ -28,6 +29,7 @@ public final class CoxRossRubenstein extends BinomialModel {
      * @param frame      market data snapshot supplying spot, discount rate and cost of carry
      * @param volatility annualized volatility as a decimal; must be finite and above {@code 1e-6}
      * @param steps      positive number of tree steps
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws NullPointerException              if {@code contract} or {@code frame} is {@code null}
      * @throws UnsupportedExerciseStyleException if {@code contract} is not American
      * @throws InvalidStepCountException         if {@code steps} is not positive
@@ -36,8 +38,14 @@ public final class CoxRossRubenstein extends BinomialModel {
      * @throws MathException                     if the risk-neutral probability is not finite
      *                                           or falls outside {@code [0, 1]}
      */
-    public CoxRossRubenstein(OptionContract contract, MarketData frame, double volatility, int steps) {
-        super(contract, frame, steps);
+    public CoxRossRubenstein(
+            OptionContract contract,
+            MarketData frame,
+            double volatility,
+            int steps,
+            DayCountConvention dayCountConvention
+    ) {
+        super(contract, frame, steps, dayCountConvention);
         PricingValidation.requireValidVolatility(volatility);
         this.u = FastMath.exp(volatility * FastMath.sqrt(this.dt));
         this.d = 1.0 / this.u;
@@ -56,27 +64,53 @@ public final class CoxRossRubenstein extends BinomialModel {
 
     @Override
     public CoxRossRubenstein withVolatility(double newVolatility) {
-        return new CoxRossRubenstein(this.contract, this.frame, newVolatility, this.steps);
+        return new CoxRossRubenstein(
+                this.contract, this.frame, newVolatility, this.steps, this.dayCountConvention
+        );
     }
 
     @Override
     public CoxRossRubenstein withRiskFreeRate(double newRate) {
-        return new CoxRossRubenstein(this.contract, this.frame.withRiskFreeRate(newRate), this.volatility, this.steps);
+        return new CoxRossRubenstein(
+                this.contract,
+                this.frame.withRiskFreeRate(newRate),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     public CoxRossRubenstein withSpot(double newSpot) {
-        return new CoxRossRubenstein(this.contract, this.frame.withSpotPrice(newSpot), this.volatility, this.steps);
+        return new CoxRossRubenstein(
+                this.contract,
+                this.frame.withSpotPrice(newSpot),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     public CoxRossRubenstein withTimestamp(long newTimestampNanos) {
-        return new CoxRossRubenstein(this.contract, this.frame.withTimestampNanos(newTimestampNanos), this.volatility, this.steps);
+        return new CoxRossRubenstein(
+                this.contract,
+                this.frame.withTimestampNanos(newTimestampNanos),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     protected BinomialModel withStrike(double newStrike) {
-        return new CoxRossRubenstein(this.contract.withStrike(newStrike), this.frame, this.volatility, this.steps);
+        return new CoxRossRubenstein(
+                this.contract.withStrike(newStrike),
+                this.frame,
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     /**
@@ -95,4 +129,3 @@ public final class CoxRossRubenstein extends BinomialModel {
         return volatility;
     }
 }
-

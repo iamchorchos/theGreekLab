@@ -16,8 +16,11 @@ import org.junit.jupiter.api.Test;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_360;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class BlackScholesCallPriceTest {
 
@@ -39,17 +42,17 @@ class BlackScholesCallPriceTest {
 
         assertAll(
                 () -> assertEquals(
-                        new BlackScholesMerton(call, equity, VOLATILITY).price(),
+                        new BlackScholesMerton(call, equity, VOLATILITY, ACT_365F).price(),
                         directCallPrice(call, equity),
                         TOLERANCE
                 ),
                 () -> assertEquals(
-                        new Black76(call, futures, VOLATILITY).price(),
+                        new Black76(call, futures, VOLATILITY, ACT_365F).price(),
                         directCallPrice(call, futures),
                         TOLERANCE
                 ),
                 () -> assertEquals(
-                        new GarmanKohlhagen(call, fx, VOLATILITY).price(),
+                        new GarmanKohlhagen(call, fx, VOLATILITY, ACT_365F).price(),
                         directCallPrice(call, fx),
                         TOLERANCE
                 )
@@ -60,7 +63,7 @@ class BlackScholesCallPriceTest {
     void supportsPutCallTransform() {
         EquityFrame frame = new EquityFrame(NOW, SPOT, 0.05, 0.02);
         OptionContract put = contract(OptionType.PUT);
-        double timeToExpiry = put.getTimeToExpiry(frame.timestampNanos());
+        double timeToExpiry = ACT_365F.timeToExpiry(frame.timestampNanos(), put.expirationDate());
         double riskFreeRate = frame.riskFreeRate();
         double costOfCarry = frame.costOfCarry();
 
@@ -74,7 +77,7 @@ class BlackScholesCallPriceTest {
         );
 
         assertEquals(
-                new BlackScholesMerton(put, frame, VOLATILITY).price(),
+                new BlackScholesMerton(put, frame, VOLATILITY, ACT_365F).price(),
                 transformedCall,
                 TOLERANCE
         );
@@ -86,7 +89,8 @@ class BlackScholesCallPriceTest {
         BlackScholesMerton model = new BlackScholesMerton(
                 contract(OptionType.CALL),
                 frame,
-                VOLATILITY
+                VOLATILITY,
+                ACT_365F
         );
         var values = model.greeks();
 
@@ -100,11 +104,32 @@ class BlackScholesCallPriceTest {
         );
     }
 
+    @Test
+    void honorsSelectedDayCount() {
+        EquityFrame frame = new EquityFrame(NOW, SPOT, 0.05, 0.02);
+        OptionContract call = contract(OptionType.CALL);
+
+        BlackScholesMerton act365 = new BlackScholesMerton(
+                call, frame, VOLATILITY, ACT_365F
+        );
+        BlackScholesMerton act360 = new BlackScholesMerton(
+                call, frame, VOLATILITY, ACT_360
+        );
+
+        assertAll(
+                () -> assertEquals(1.0, act365.timeToExpiry(), TOLERANCE),
+                () -> assertEquals(365.0 / 360.0, act360.timeToExpiry(), TOLERANCE),
+                () -> assertEquals(ACT_365F, act365.dayCountConvention()),
+                () -> assertEquals(ACT_360, act360.dayCountConvention()),
+                () -> assertNotEquals(act365.price(), act360.price())
+        );
+    }
+
     private static double directCallPrice(OptionContract contract, MarketData frame) {
         return BlackScholes.callPrice(
                 frame.spotPrice(),
                 contract.strikePrice(),
-                contract.getTimeToExpiry(frame.timestampNanos()),
+                ACT_365F.timeToExpiry(frame.timestampNanos(), contract.expirationDate()),
                 frame.riskFreeRate(),
                 frame.costOfCarry(),
                 VOLATILITY

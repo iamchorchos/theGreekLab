@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
+
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @Warmup(iterations = 20, time = 2, timeUnit = TimeUnit.SECONDS)
@@ -114,6 +116,8 @@ public class MathAlgorithmsBenchmark {
 
     @Benchmark
     public void benchmarkImpliedVolatility(ImpliedVolState state, Blackhole bh) {
-        bh.consume(VolatilityCalculator.impliedVolatility(state.contract, state.frame, state.marketPrice));
+        bh.consume(VolatilityCalculator.impliedVolatility(
+                state.contract, state.frame, state.marketPrice, ACT_365F
+        ));
     }
 }

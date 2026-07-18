@@ -23,6 +23,8 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.concurrent.TimeUnit;
 
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
+
 /**
  * Measures Bjerksund-Stensland pricing and Greeks and compares the approximation
  * with fresh Cox-Ross-Rubinstein and Leisen-Reimer trees.
@@ -158,15 +160,15 @@ public class AmericanOptionBenchmark {
         }
 
         private BjerksundStensland bjerksund() {
-            return new BjerksundStensland(contract, frame, volatility);
+            return new BjerksundStensland(contract, frame, volatility, ACT_365F);
         }
 
         private CoxRossRubenstein crr(int steps) {
-            return new CoxRossRubenstein(contract, frame, volatility, steps);
+            return new CoxRossRubenstein(contract, frame, volatility, steps, ACT_365F);
         }
 
         private LeisenReimer leisenReimer(int steps) {
-            return new LeisenReimer(contract, frame, volatility, steps);
+            return new LeisenReimer(contract, frame, volatility, steps, ACT_365F);
         }
     }
 }

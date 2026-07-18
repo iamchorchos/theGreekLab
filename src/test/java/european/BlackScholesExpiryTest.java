@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class BlackScholesExpiryTest {
 
@@ -23,7 +24,7 @@ class BlackScholesExpiryTest {
         OptionContract contract = contract(OptionType.CALL, expiry);
         EquityFrame frame = new EquityFrame(expiry, 110.0, 0.05, 0.0);
 
-        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
+        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2, ACT_365F);
 
         assertAll(
                 () -> assertEquals(0.0, option.timeToExpiry(), TOLERANCE),
@@ -39,7 +40,7 @@ class BlackScholesExpiryTest {
         OptionContract contract = contract(OptionType.CALL, expiry);
         EquityFrame frame = new EquityFrame(expiry, 90.0, 0.05, 0.0);
 
-        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
+        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2, ACT_365F);
 
         assertAll(
                 () -> assertEquals(0.0, option.price(), TOLERANCE),
@@ -54,7 +55,7 @@ class BlackScholesExpiryTest {
         OptionContract contract = contract(OptionType.PUT, expiry);
         EquityFrame frame = new EquityFrame(expiry, 90.0, 0.05, 0.0);
 
-        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2);
+        BlackScholesMerton option = new BlackScholesMerton(contract, frame, 0.2, ACT_365F);
 
         assertAll(
                 () -> assertEquals(10.0, option.price(), TOLERANCE),
@@ -68,8 +69,12 @@ class BlackScholesExpiryTest {
         ZonedDateTime expiry = ZonedDateTime.of(2026, 1, 16, 16, 0, 0, 0, ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(expiry, 100.0, 0.05, 0.0);
 
-        BlackScholesMerton call = new BlackScholesMerton(contract(OptionType.CALL, expiry), frame, 0.2);
-        BlackScholesMerton put = new BlackScholesMerton(contract(OptionType.PUT, expiry), frame, 0.2);
+        BlackScholesMerton call = new BlackScholesMerton(
+                contract(OptionType.CALL, expiry), frame, 0.2, ACT_365F
+        );
+        BlackScholesMerton put = new BlackScholesMerton(
+                contract(OptionType.PUT, expiry), frame, 0.2, ACT_365F
+        );
 
         assertAll(
                 () -> assertEquals(0.0, call.price(), TOLERANCE),

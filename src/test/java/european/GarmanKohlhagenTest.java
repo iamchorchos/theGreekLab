@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class GarmanKohlhagenTest {
 
@@ -32,8 +33,8 @@ class GarmanKohlhagenTest {
         OptionContract putContract = contract("EURUSD-P", OptionType.PUT, strike, now, tYears);
         FXFrame frame = new FXFrame(now, spot, domesticRate, foreignRate);
 
-        GarmanKohlhagen call = new GarmanKohlhagen(callContract, frame, volatility);
-        GarmanKohlhagen put = new GarmanKohlhagen(putContract, frame, volatility);
+        GarmanKohlhagen call = new GarmanKohlhagen(callContract, frame, volatility, ACT_365F);
+        GarmanKohlhagen put = new GarmanKohlhagen(putContract, frame, volatility, ACT_365F);
 
         double expected = spot * Math.exp(-foreignRate * call.timeToExpiry())
                 - strike * Math.exp(-domesticRate * call.timeToExpiry());
@@ -54,16 +55,16 @@ class GarmanKohlhagenTest {
 
         OptionContract contract = contract("EURUSD", OptionType.CALL, strike, now, tYears);
         FXFrame frame = new FXFrame(now, spot, domesticRate, foreignRate);
-        GarmanKohlhagen option = new GarmanKohlhagen(contract, frame, volatility);
+        GarmanKohlhagen option = new GarmanKohlhagen(contract, frame, volatility, ACT_365F);
 
         double domesticBumped = (
-                new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate + bump, foreignRate), volatility).price()
-                        - new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate - bump, foreignRate), volatility).price()
+                new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate + bump, foreignRate), volatility, ACT_365F).price()
+                        - new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate - bump, foreignRate), volatility, ACT_365F).price()
         ) / (2.0 * bump);
 
         double foreignBumped = (
-                new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate, foreignRate + bump), volatility).price()
-                        - new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate, foreignRate - bump), volatility).price()
+                new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate, foreignRate + bump), volatility, ACT_365F).price()
+                        - new GarmanKohlhagen(contract, new FXFrame(now, spot, domesticRate, foreignRate - bump), volatility, ACT_365F).price()
         ) / (2.0 * bump);
 
         assertAll(
@@ -75,18 +76,13 @@ class GarmanKohlhagenTest {
     private static OptionContract contract(String symbol, OptionType type, double strike, ZonedDateTime now, double tYears) {
         long nanosToExpiry = (long) (tYears * 365.0 * 86_400.0 * 1_000_000_000L);
         ZonedDateTime expiry = now.plusNanos(nanosToExpiry);
-        long expiryEpochNanos = expiry.toInstant().getEpochSecond() * 1_000_000_000L + expiry.getNano();
-        double secondsInYear = 365.0 * 86_400.0;
-
         return new OptionContract(
                 symbol,
                 type,
                 Option.EUROPEAN,
                 strike,
                 expiry,
-                100_000,
-                expiryEpochNanos,
-                secondsInYear
+                100_000
         );
     }
 }

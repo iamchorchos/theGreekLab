@@ -5,7 +5,6 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.frame.EquityFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.binomial.BinomialModel;
 import com.thegreeklab.finance.model.american.binomial.CoxRossRubenstein;
 import com.thegreeklab.finance.model.american.binomial.LeisenReimer;
@@ -17,6 +16,7 @@ import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class BinomialGreeksTest {
 
@@ -28,8 +28,8 @@ class BinomialGreeksTest {
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertVanillaGreekSanity(
-                new CoxRossRubenstein(contract(now, OptionType.CALL), frame, 0.2, 101),
-                new CoxRossRubenstein(contract(now, OptionType.PUT), frame, 0.2, 101)
+                new CoxRossRubenstein(contract(now, OptionType.CALL), frame, 0.2, 101, ACT_365F),
+                new CoxRossRubenstein(contract(now, OptionType.PUT), frame, 0.2, 101, ACT_365F)
         );
     }
 
@@ -39,8 +39,8 @@ class BinomialGreeksTest {
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertVanillaGreekSanity(
-                new LeisenReimer(contract(now, OptionType.CALL), frame, 0.2, 101),
-                new LeisenReimer(contract(now, OptionType.PUT), frame, 0.2, 101)
+                new LeisenReimer(contract(now, OptionType.CALL), frame, 0.2, 101, ACT_365F),
+                new LeisenReimer(contract(now, OptionType.PUT), frame, 0.2, 101, ACT_365F)
         );
     }
 
@@ -49,8 +49,12 @@ class BinomialGreeksTest {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        CoxRossRubenstein oneStep = new CoxRossRubenstein(contract(now, OptionType.CALL), frame, 0.2, 1);
-        CoxRossRubenstein twoSteps = new CoxRossRubenstein(contract(now, OptionType.CALL), frame, 0.2, 2);
+        CoxRossRubenstein oneStep = new CoxRossRubenstein(
+                contract(now, OptionType.CALL), frame, 0.2, 1, ACT_365F
+        );
+        CoxRossRubenstein twoSteps = new CoxRossRubenstein(
+                contract(now, OptionType.CALL), frame, 0.2, 2, ACT_365F
+        );
 
         assertAll(
                 () -> assertThrows(InvalidStepCountException.class, oneStep::delta),
@@ -94,9 +98,7 @@ class BinomialGreeksTest {
                 Option.AMERICAN,
                 100.0,
                 expiry,
-                100,
-                MarketData.toEpochNanos(expiry),
-                SECONDS_IN_YEAR
+                100
         );
     }
 }

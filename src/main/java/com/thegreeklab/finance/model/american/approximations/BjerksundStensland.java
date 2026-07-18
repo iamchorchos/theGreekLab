@@ -9,6 +9,8 @@ import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.european.BlackScholes;
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
 import com.thegreeklab.finance.model.greeks.StandardGreekValues;
+import com.thegreeklab.finance.time.DayCountConvention;
+import com.thegreeklab.finance.time.EpochNanos;
 import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.BivariateNormal;
 import com.thegreeklab.math.ERF;
@@ -67,6 +69,7 @@ public final class BjerksundStensland implements BumpableOptionModel {
     private final OptionType type;
     private final OptionContract contract;
     private final MarketData frame;
+    private final DayCountConvention dayCountConvention;
 
     private static final double DELTA_SPOT_BUMP = 1e-4;
     private static final double GAMMA_SPOT_BUMP = 1e-3;
@@ -81,15 +84,22 @@ public final class BjerksundStensland implements BumpableOptionModel {
      * @param marketData     market-data snapshot supplying spot, rates and cost of carry
      * @param volatility     annualized volatility as a decimal; must be finite and at
      *                       least {@link PricingValidation#MIN_VOLATILITY}
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws NullPointerException              if {@code optionContract} or
      *                                           {@code marketData} is {@code null}
      * @throws InvalidVolatilityException        if {@code volatility} is not finite
      *                                           or is below the supported minimum
      * @throws UnsupportedExerciseStyleException if the contract is not American
      */
-    public BjerksundStensland(OptionContract optionContract, MarketData marketData, double volatility) {
+    public BjerksundStensland(
+            OptionContract optionContract,
+            MarketData marketData,
+            double volatility,
+            DayCountConvention dayCountConvention
+    ) {
         Objects.requireNonNull(optionContract, "Option contract cannot be null.");
         Objects.requireNonNull(marketData, "Market data cannot be null.");
+        Objects.requireNonNull(dayCountConvention, "Day-count convention cannot be null.");
 
         if (optionContract.option() != Option.AMERICAN) {
             throw new UnsupportedExerciseStyleException("Unsupported exercise style: " + optionContract.option());
@@ -99,7 +109,10 @@ public final class BjerksundStensland implements BumpableOptionModel {
 
         this.strikePrice = optionContract.strikePrice();
         this.spotPrice = marketData.spotPrice();
-        this.timeToExpiry = optionContract.getTimeToExpiry(marketData.timestampNanos());
+        this.timeToExpiry = dayCountConvention.timeToExpiry(
+                marketData.timestampNanos(),
+                optionContract.expirationDate()
+        );
         this.volatility = volatility;
         this.volatilitySq = volatility * volatility;
         this.riskFreeRate = marketData.riskFreeRate();
@@ -107,6 +120,7 @@ public final class BjerksundStensland implements BumpableOptionModel {
         this.type = optionContract.type();
         this.contract = optionContract;
         this.frame = marketData;
+        this.dayCountConvention = dayCountConvention;
     }
 
     /**
@@ -273,22 +287,31 @@ public final class BjerksundStensland implements BumpableOptionModel {
 
     @Override
     public BjerksundStensland withVolatility(double newVolatility) {
-        return new BjerksundStensland(contract, frame, newVolatility);
+        return new BjerksundStensland(contract, frame, newVolatility, dayCountConvention);
     }
 
     @Override
     public BjerksundStensland withRiskFreeRate(double newRate) {
-        return new BjerksundStensland(contract, frame.withRiskFreeRate(newRate), volatility);
+        return new BjerksundStensland(
+                contract, frame.withRiskFreeRate(newRate), volatility, dayCountConvention
+        );
     }
 
     @Override
     public BjerksundStensland withSpot(double newSpot) {
-        return new BjerksundStensland(contract, frame.withSpotPrice(newSpot), volatility);
+        return new BjerksundStensland(
+                contract, frame.withSpotPrice(newSpot), volatility, dayCountConvention
+        );
     }
 
     @Override
     public BjerksundStensland withTimestamp(long newTimestampNanos) {
-        return new BjerksundStensland(contract, frame.withTimestampNanos(newTimestampNanos), volatility);
+        return new BjerksundStensland(
+                contract,
+                frame.withTimestampNanos(newTimestampNanos),
+                volatility,
+                dayCountConvention
+        );
     }
 
     /**
@@ -364,10 +387,14 @@ public final class BjerksundStensland implements BumpableOptionModel {
             return 0.0;
         }
 
-        long remainingNanos = contract.expirationNanosEpoch() - frame.timestampNanos();
+        long expirationNanos = EpochNanos.from(contract.expirationDate());
+        long remainingNanos = Math.subtractExact(expirationNanos, frame.timestampNanos());
         long thetaBump = Math.min(ONE_DAY_NANOS, Math.max(1L, remainingNanos / 2L));
         long bumpedTimestamp = Math.addExact(frame.timestampNanos(), thetaBump);
-        double bumpedTimeToExpiry = contract.getTimeToExpiry(bumpedTimestamp);
+        double bumpedTimeToExpiry = dayCountConvention.timeToExpiry(
+                bumpedTimestamp,
+                contract.expirationDate()
+        );
         double elapsedYears = timeToExpiry - bumpedTimeToExpiry;
 
         double bumped = withTimestamp(bumpedTimestamp).price();
@@ -406,6 +433,11 @@ public final class BjerksundStensland implements BumpableOptionModel {
                 theta(currentPrice),
                 rho()
         );
+    }
+
+    @Override
+    public DayCountConvention dayCountConvention() {
+        return dayCountConvention;
     }
 
 }
