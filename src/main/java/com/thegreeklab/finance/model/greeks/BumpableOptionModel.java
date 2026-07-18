@@ -1,5 +1,7 @@
 package com.thegreeklab.finance.model.greeks;
 
+import com.thegreeklab.finance.time.DayCountConvention;
+
 /**
  * Immutable option model that can create bumped copies for scenario repricing.
  *
@@ -8,6 +10,13 @@ package com.thegreeklab.finance.model.greeks;
  * type covariantly to their concrete model class.</p>
  */
 public interface BumpableOptionModel extends StandardGreeks {
+
+    /**
+     * Returns the convention used to derive time to expiry.
+     *
+     * @return explicitly selected day-count convention
+     */
+    DayCountConvention dayCountConvention();
 
     /**
      * Creates an equivalent model with a different underlying price.

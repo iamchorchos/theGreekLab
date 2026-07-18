@@ -48,3 +48,44 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: target/site/jacoco/jacoco.xml
+
+  windows-native-smoke:
+    name: Windows bundled DLL smoke test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
+          cache: maven
+
+      - name: Build JAR and test bundled DLL
+        shell: pwsh
+        env:
+          THEGREEKLAB_PBIVNORM_PATH: ""
+        run: .\mvnw.cmd -B -ntp "-Dtest=BivariateNormalTest" package
+
+      - name: Verify DLL is packaged
+        shell: pwsh
+        run: |
+          $mainJar = Get-ChildItem target\thegreeklab-*.jar |
+            Where-Object { $_.Name -notmatch '-(sources|javadoc)\.jar$' } |
+            Select-Object -First 1
+
+          if ($null -eq $mainJar) {
+            throw "Main thegreeklab JAR was not created."
+          }
+
+          $entries = & jar tf $mainJar.FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not inspect $($mainJar.Name)."
+          }
+
+          if ($entries -notcontains "native/windows-x86_64/pbivnorm.dll") {
+            throw "Bundled pbivnorm.dll is missing from $($mainJar.Name)."
+          }

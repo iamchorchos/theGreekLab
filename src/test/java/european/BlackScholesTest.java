@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 /**
  * Invariant-based tests for the generalized Black-Scholes engine.
@@ -55,17 +56,12 @@ class BlackScholesInvariantsTest {
         long nanos = (long) (tYears * 365.0 * 86_400.0 * 1_000_000_000L);
         ZonedDateTime expiry = now.plusNanos(nanos);
 
-        // Use a fixed 365-day year so the generated year fraction matches the
-        // analytical expectations exactly.
-        long expiryEpochNanos = expiry.toInstant().getEpochSecond() * 1_000_000_000L + expiry.getNano();
-        double yearFraction = 365.0 * 86_400.0;
-
-        OptionContract callContract = new OptionContract("CALL", OptionType.CALL, Option.EUROPEAN, K, expiry, 100, expiryEpochNanos, yearFraction);
-        OptionContract putContract  = new OptionContract("PUT",  OptionType.PUT,  Option.EUROPEAN, K, expiry, 100, expiryEpochNanos, yearFraction);
+        OptionContract callContract = new OptionContract("CALL", OptionType.CALL, Option.EUROPEAN, K, expiry, 100);
+        OptionContract putContract  = new OptionContract("PUT",  OptionType.PUT,  Option.EUROPEAN, K, expiry, 100);
         EquityFrame frame = new EquityFrame(now, S, r, q);
 
-        BlackScholesMerton callEngine = new BlackScholesMerton(callContract, frame, sigma);
-        BlackScholesMerton putEngine  = new BlackScholesMerton(putContract, frame, sigma);
+        BlackScholesMerton callEngine = new BlackScholesMerton(callContract, frame, sigma, ACT_365F);
+        BlackScholesMerton putEngine  = new BlackScholesMerton(putContract, frame, sigma, ACT_365F);
 
         // Put-call parity.
         double callPrice = callEngine.price();
@@ -80,10 +76,10 @@ class BlackScholesInvariantsTest {
         double dS = 0.0001;
         double dVol = 0.0001;
 
-        BlackScholesMerton engineSpotUp = new BlackScholesMerton(callContract, new EquityFrame(now, S + dS, r, q), sigma);
-        BlackScholesMerton engineSpotDn = new BlackScholesMerton(callContract, new EquityFrame(now, S - dS, r, q), sigma);
-        BlackScholesMerton engineVolUp = new BlackScholesMerton(callContract, new EquityFrame(now, S, r, q), sigma + dVol);
-        BlackScholesMerton engineVolDn = new BlackScholesMerton(callContract, new EquityFrame(now, S, r, q), sigma - dVol);
+        BlackScholesMerton engineSpotUp = new BlackScholesMerton(callContract, new EquityFrame(now, S + dS, r, q), sigma, ACT_365F);
+        BlackScholesMerton engineSpotDn = new BlackScholesMerton(callContract, new EquityFrame(now, S - dS, r, q), sigma, ACT_365F);
+        BlackScholesMerton engineVolUp = new BlackScholesMerton(callContract, new EquityFrame(now, S, r, q), sigma + dVol, ACT_365F);
+        BlackScholesMerton engineVolDn = new BlackScholesMerton(callContract, new EquityFrame(now, S, r, q), sigma - dVol, ACT_365F);
 
         double dDelta_dVol = (engineVolUp.delta() - engineVolDn.delta()) / (2.0 * dVol);
         double dVega_dSpot = (engineSpotUp.vega() - engineSpotDn.vega()) / (2.0 * dS);

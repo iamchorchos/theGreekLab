@@ -1,16 +1,11 @@
 package frame;
 
-import com.thegreeklab.finance.exception.InvalidDateException;
 import com.thegreeklab.finance.exception.InvalidRateException;
 import com.thegreeklab.finance.exception.NonPositivePriceException;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.frame.FXFrame;
 import com.thegreeklab.finance.frame.FuturesFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import org.junit.jupiter.api.Test;
-
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,17 +71,4 @@ class MarketDataFrameTest {
         );
     }
 
-    @Test
-    void convertsTimestamp() {
-        ZonedDateTime timestamp = ZonedDateTime.of(2026, 7, 11, 12, 30, 15, 123_456_789, ZoneOffset.UTC);
-
-        long expected = timestamp.toInstant().getEpochSecond() * 1_000_000_000L + timestamp.getNano();
-
-        assertEquals(expected, MarketData.toEpochNanos(timestamp));
-    }
-
-    @Test
-    void rejectsNullTimestamp() {
-        assertThrows(InvalidDateException.class, () -> MarketData.toEpochNanos(null));
-    }
 }

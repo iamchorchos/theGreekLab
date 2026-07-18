@@ -6,7 +6,6 @@ import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.exception.ExpiredContractException;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.frame.EquityFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.trinomial.TrinomialTree;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import org.junit.jupiter.api.Test;
@@ -17,6 +16,8 @@ import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_360;
 
 class TrinomialTreeTest {
 
@@ -30,7 +31,7 @@ class TrinomialTreeTest {
 
         assertThrows(
                 ExpiredContractException.class,
-                () -> new TrinomialTree(contract, frame, 0.20, 100)
+                () -> new TrinomialTree(contract, frame, 0.20, 100, ACT_365F)
         );
     }
 
@@ -41,8 +42,8 @@ class TrinomialTreeTest {
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double trinomialPrice = new TrinomialTree(contract, frame, 0.20, 500).price();
-        double blackScholesPrice = new BlackScholesMerton(contract, frame, 0.20).price();
+        double trinomialPrice = new TrinomialTree(contract, frame, 0.20, 500, ACT_365F).price();
+        double blackScholesPrice = new BlackScholesMerton(contract, frame, 0.20, ACT_365F).price();
 
         assertEquals(blackScholesPrice, trinomialPrice, 0.005);
     }
@@ -53,8 +54,8 @@ class TrinomialTreeTest {
         ZonedDateTime expiry = now.plusNanos((long) (SECONDS_IN_YEAR * 1_000_000_000L));
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
-        TrinomialTree trinomial = new TrinomialTree(contract, frame, 0.20, 500);
-        BlackScholesMerton blackScholes = new BlackScholesMerton(contract, frame, 0.20);
+        TrinomialTree trinomial = new TrinomialTree(contract, frame, 0.20, 500, ACT_365F);
+        BlackScholesMerton blackScholes = new BlackScholesMerton(contract, frame, 0.20, ACT_365F);
 
         assertEquals(blackScholes.delta(), trinomial.delta(), 0.002);
         assertEquals(blackScholes.gamma(), trinomial.gamma(), 0.0002);
@@ -64,18 +65,43 @@ class TrinomialTreeTest {
     }
 
     @Test
-    void bumpsPreserveOriginal() {
+    void bumpsPreserveState() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         ZonedDateTime expiry = now.plusNanos((long) (SECONDS_IN_YEAR * 1_000_000_000L));
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
-        TrinomialTree original = new TrinomialTree(contract, frame, 0.20, 200);
+        TrinomialTree original = new TrinomialTree(contract, frame, 0.20, 200, ACT_360);
         double originalPrice = original.price();
+        long laterTimestamp = frame.timestampNanos() + 86_400_000_000_000L;
 
-        TrinomialTree bumped = original.withSpot(101.0);
+        TrinomialTree spotBumped = original.withSpot(101.0);
+        TrinomialTree volatilityBumped = original.withVolatility(0.25);
+        TrinomialTree rateBumped = original.withRiskFreeRate(0.06);
+        TrinomialTree timeBumped = original.withTimestamp(laterTimestamp);
 
         assertEquals(originalPrice, original.price());
-        assertTrue(bumped.price() > originalPrice);
+        assertEquals(ACT_360, original.dayCountConvention());
+        assertEquals(ACT_360, spotBumped.dayCountConvention());
+        assertEquals(ACT_360, volatilityBumped.dayCountConvention());
+        assertEquals(ACT_360, rateBumped.dayCountConvention());
+        assertEquals(ACT_360, timeBumped.dayCountConvention());
+        assertTrue(spotBumped.price() > originalPrice);
+        assertEquals(
+                new TrinomialTree(contract, frame, 0.25, 200, ACT_360).price(),
+                volatilityBumped.price()
+        );
+        assertEquals(
+                new TrinomialTree(
+                        contract, frame.withRiskFreeRate(0.06), 0.20, 200, ACT_360
+                ).price(),
+                rateBumped.price()
+        );
+        assertEquals(
+                new TrinomialTree(
+                        contract, frame.withTimestampNanos(laterTimestamp), 0.20, 200, ACT_360
+                ).price(),
+                timeBumped.price()
+        );
     }
 
     @Test
@@ -86,8 +112,8 @@ class TrinomialTreeTest {
         OptionContract europeanPut = contract(expiry, Option.EUROPEAN, OptionType.PUT);
         OptionContract americanPut = contract(expiry, Option.AMERICAN, OptionType.PUT);
 
-        double europeanPrice = new TrinomialTree(europeanPut, frame, 0.20, 200).price();
-        double americanPrice = new TrinomialTree(americanPut, frame, 0.20, 200).price();
+        double europeanPrice = new TrinomialTree(europeanPut, frame, 0.20, 200, ACT_365F).price();
+        double americanPrice = new TrinomialTree(americanPut, frame, 0.20, 200, ACT_365F).price();
 
         assertTrue(americanPrice >= europeanPrice);
     }
@@ -99,7 +125,7 @@ class TrinomialTreeTest {
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.05);
 
-        double price = new TrinomialTree(contract, frame, 0.20, 100).price();
+        double price = new TrinomialTree(contract, frame, 0.20, 100, ACT_365F).price();
 
         assertTrue(Double.isFinite(price));
     }
@@ -113,9 +139,9 @@ class TrinomialTreeTest {
 
         assertThrows(
                 InvalidStepCountException.class,
-                () -> new TrinomialTree(contract, frame, 0.02, 3)
+                () -> new TrinomialTree(contract, frame, 0.02, 3, ACT_365F)
         );
-        assertTrue(Double.isFinite(new TrinomialTree(contract, frame, 0.02, 4).price()));
+        assertTrue(Double.isFinite(new TrinomialTree(contract, frame, 0.02, 4, ACT_365F).price()));
     }
 
     @Test
@@ -124,7 +150,7 @@ class TrinomialTreeTest {
         ZonedDateTime expiry = now.plusNanos((long) (SECONDS_IN_YEAR * 1_000_000_000L));
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
-        TrinomialTree model = new TrinomialTree(contract, frame, 0.02, 4);
+        TrinomialTree model = new TrinomialTree(contract, frame, 0.02, 4, ACT_365F);
 
         assertTrue(Double.isFinite(model.vega()));
     }
@@ -136,7 +162,7 @@ class TrinomialTreeTest {
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         double rate = Math.sqrt(12.999 * 2.0 * 0.20 * 0.20);
         EquityFrame frame = new EquityFrame(now, 100.0, rate, 0.0);
-        TrinomialTree model = new TrinomialTree(contract, frame, 0.20, 13);
+        TrinomialTree model = new TrinomialTree(contract, frame, 0.20, 13, ACT_365F);
 
         assertTrue(Double.isFinite(model.rho()));
     }
@@ -150,7 +176,9 @@ class TrinomialTreeTest {
 
         assertThrows(
                 InvalidStepCountException.class,
-                () -> new TrinomialTree(contract, frame, 0.20, TrinomialTree.MAX_STEPS + 1)
+                () -> new TrinomialTree(
+                        contract, frame, 0.20, TrinomialTree.MAX_STEPS + 1, ACT_365F
+                )
         );
     }
 
@@ -165,9 +193,7 @@ class TrinomialTreeTest {
                 style,
                 100.0,
                 expiry,
-                100,
-                MarketData.toEpochNanos(expiry),
-                SECONDS_IN_YEAR
+                100
         );
     }
 }

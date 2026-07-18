@@ -8,6 +8,7 @@ import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.exception.UnsupportedFrameTypeException;
 import com.thegreeklab.finance.frame.FuturesFrame;
 import com.thegreeklab.finance.frame.MarketData;
+import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.PeizerPrattInversion;
 import net.jafama.FastMath;
@@ -32,6 +33,7 @@ public final class LeisenReimer extends BinomialModel {
      * @param frame      market data snapshot supplying spot, discount rate and cost of carry
      * @param volatility annualized volatility as a decimal; must be finite and above {@code 1e-6}
      * @param steps      positive odd number of tree steps
+     * @param dayCountConvention convention used to derive the year fraction
      * @throws NullPointerException              if {@code contract} or {@code frame} is {@code null}
      * @throws UnsupportedExerciseStyleException if {@code contract} is not American
      * @throws UnsupportedFrameTypeException     if {@code frame} is a futures frame
@@ -41,8 +43,14 @@ public final class LeisenReimer extends BinomialModel {
      * @throws MathException                     if transformed tree probabilities or
      *                                           up/down factors are not usable
      */
-    public LeisenReimer(OptionContract contract, MarketData frame, double volatility, int steps) {
-        super(contract, frame, steps);
+    public LeisenReimer(
+            OptionContract contract,
+            MarketData frame,
+            double volatility,
+            int steps,
+            DayCountConvention dayCountConvention
+    ) {
+        super(contract, frame, steps, dayCountConvention);
         if (frame instanceof FuturesFrame)
             throw new UnsupportedFrameTypeException("FuturesFrame is not supported for Leisen-Reimer.");
         PricingValidation.requireValidVolatility(volatility);
@@ -88,27 +96,53 @@ public final class LeisenReimer extends BinomialModel {
 
     @Override
     public LeisenReimer withVolatility(double newVolatility) {
-        return new LeisenReimer(this.contract, this.frame, newVolatility, this.steps);
+        return new LeisenReimer(
+                this.contract, this.frame, newVolatility, this.steps, this.dayCountConvention
+        );
     }
 
     @Override
     public LeisenReimer withRiskFreeRate(double newRate) {
-        return new LeisenReimer(this.contract, this.frame.withRiskFreeRate(newRate), this.volatility, this.steps);
+        return new LeisenReimer(
+                this.contract,
+                this.frame.withRiskFreeRate(newRate),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     public LeisenReimer withSpot(double newSpot) {
-        return new LeisenReimer(this.contract, this.frame.withSpotPrice(newSpot), this.volatility, this.steps);
+        return new LeisenReimer(
+                this.contract,
+                this.frame.withSpotPrice(newSpot),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     public LeisenReimer withTimestamp(long newTimestampNanos) {
-        return new LeisenReimer(this.contract, this.frame.withTimestampNanos(newTimestampNanos), this.volatility, this.steps);
+        return new LeisenReimer(
+                this.contract,
+                this.frame.withTimestampNanos(newTimestampNanos),
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override
     protected LeisenReimer withStrike(double newStrike) {
-        return new LeisenReimer(this.contract.withStrike(newStrike), this.frame, this.volatility, this.steps);
+        return new LeisenReimer(
+                this.contract.withStrike(newStrike),
+                this.frame,
+                this.volatility,
+                this.steps,
+                this.dayCountConvention
+        );
     }
 
     @Override

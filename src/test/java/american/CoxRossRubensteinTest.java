@@ -7,7 +7,6 @@ import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.EquityFrame;
-import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.american.binomial.CoxRossRubenstein;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import org.junit.jupiter.api.Test;
@@ -18,6 +17,7 @@ import java.time.ZonedDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.thegreeklab.finance.time.DayCountConvention.ACT_365F;
 
 class CoxRossRubensteinTest {
 
@@ -31,7 +31,7 @@ class CoxRossRubensteinTest {
 
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> new CoxRossRubenstein(contract, frame, 0.0, 101)
+                () -> new CoxRossRubenstein(contract, frame, 0.0, 101, ACT_365F)
         );
     }
 
@@ -43,7 +43,7 @@ class CoxRossRubensteinTest {
 
         assertThrows(
                 InvalidVolatilityException.class,
-                () -> new CoxRossRubenstein(contract, frame, Double.NaN, 101)
+                () -> new CoxRossRubenstein(contract, frame, Double.NaN, 101, ACT_365F)
         );
     }
 
@@ -55,7 +55,7 @@ class CoxRossRubensteinTest {
 
         assertThrows(
                 UnsupportedExerciseStyleException.class,
-                () -> new CoxRossRubenstein(contract, frame, 0.2, 101)
+                () -> new CoxRossRubenstein(contract, frame, 0.2, 101, ACT_365F)
         );
     }
 
@@ -67,7 +67,7 @@ class CoxRossRubensteinTest {
 
         assertThrows(
                 MathException.class,
-                () -> new CoxRossRubenstein(contract, frame, 0.01, 1)
+                () -> new CoxRossRubenstein(contract, frame, 0.01, 1, ACT_365F)
         );
     }
 
@@ -78,8 +78,8 @@ class CoxRossRubensteinTest {
         OptionContract europeanCall = contract(now, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double crrPrice = new CoxRossRubenstein(americanCall, frame, 0.2, 1001).price();
-        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2).price();
+        double crrPrice = new CoxRossRubenstein(americanCall, frame, 0.2, 1001, ACT_365F).price();
+        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2, ACT_365F).price();
 
         assertEquals(blackScholesPrice, crrPrice, 0.02);
     }
@@ -91,8 +91,8 @@ class CoxRossRubensteinTest {
         OptionContract europeanPut = contract(now, Option.EUROPEAN, OptionType.PUT);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double americanPrice = new CoxRossRubenstein(americanPut, frame, 0.2, 1001).price();
-        double europeanPrice = new BlackScholesMerton(europeanPut, frame, 0.2).price();
+        double americanPrice = new CoxRossRubenstein(americanPut, frame, 0.2, 1001, ACT_365F).price();
+        double europeanPrice = new BlackScholesMerton(europeanPut, frame, 0.2, ACT_365F).price();
 
         assertTrue(americanPrice >= europeanPrice - 1e-10);
     }
@@ -104,9 +104,9 @@ class CoxRossRubensteinTest {
         OptionContract europeanCall = contract(now, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2).price();
-        double coarseError = Math.abs(new CoxRossRubenstein(americanCall, frame, 0.2, 101).price() - blackScholesPrice);
-        double fineError = Math.abs(new CoxRossRubenstein(americanCall, frame, 0.2, 1001).price() - blackScholesPrice);
+        double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2, ACT_365F).price();
+        double coarseError = Math.abs(new CoxRossRubenstein(americanCall, frame, 0.2, 101, ACT_365F).price() - blackScholesPrice);
+        double fineError = Math.abs(new CoxRossRubenstein(americanCall, frame, 0.2, 1001, ACT_365F).price() - blackScholesPrice);
 
         assertTrue(fineError < coarseError);
     }
@@ -119,9 +119,7 @@ class CoxRossRubensteinTest {
                 option,
                 100.0,
                 expiry,
-                100,
-                MarketData.toEpochNanos(expiry),
-                SECONDS_IN_YEAR
+                100
         );
     }
 }
