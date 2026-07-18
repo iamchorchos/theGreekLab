@@ -14,7 +14,7 @@
 
 ![Project Type](https://img.shields.io/badge/Project-Java%20Library-0F766E)
 ![Domain](https://img.shields.io/badge/Domain-Quant%20Finance-1D4ED8)
-![Models](https://img.shields.io/badge/Models-BSM%20%7C%20Black--76%20%7C%20CRR%20%7C%20LR%20%7C%20BS2002-7C3AED)
+![Models](https://img.shields.io/badge/Models-BSM%20%7C%20Black--76%20%7C%20CRR%20%7C%20LR%20%7C%20Trinomial%20%7C%20BS2002-7C3AED)
 ![Native](https://img.shields.io/badge/Native-Java%20Panama%20%2B%20Fortran-2563EB)
 ![Greeks](https://img.shields.io/badge/Greeks-Analytical%20%2B%20Numerical-B45309)
 ![Maven Wrapper](https://img.shields.io/badge/Maven%20Wrapper-Included-2EA44F)
@@ -34,6 +34,7 @@ numerical tests for vanilla European and American option models.
 - American option pricing:
   - Cox-Ross-Rubenstein binomial tree
   - Leisen-Reimer binomial tree
+  - recombining trinomial tree for European and American vanilla options
   - Bjerksund-Stensland 2002 closed-form approximation
 - Native numerical integration:
   - bivariate normal CDF through the Java Foreign Function and Memory API
@@ -42,6 +43,8 @@ numerical tests for vanilla European and American option models.
   - price, delta, gamma, vega, theta and rho across supported pricing models
   - immutable `StandardGreekValues` snapshots for retrieving them together
   - numerical standard Greeks for Bjerksund-Stensland 2002
+  - node-based delta, gamma and theta plus bumped vega and rho for the
+    trinomial tree
   - vanna, volga, charm, speed, lambda
   - dual delta, dual gamma
   - vera, zomma, color, ultima
@@ -237,6 +240,7 @@ src/main/java/com/thegreeklab
   finance/model/american/     American option models
     approximations/           Bjerksund-Stensland 2002
     binomial/                 CRR and Leisen-Reimer trees
+    trinomial/                recombining trinomial tree
   finance/model/european/     European option models
   finance/model/greeks/       Greeks interface
   finance/numerical/          numerical utilities
@@ -254,6 +258,8 @@ src/test/resources            numerical reference datasets
 - The library separates contract data from market data.
 - European models accept only European contracts.
 - American binomial models accept only American contracts.
+- The trinomial tree accepts European and American vanilla contracts and
+  supports immutable scenario repricing through `BumpableOptionModel`.
 - Bjerksund-Stensland accepts American contracts and exposes price plus
   numerical delta, gamma, vega, theta and rho.
 - Market-data frames encode the model-specific cost of carry:
@@ -277,6 +283,8 @@ The test suite covers:
 - ERF and normal CDF accuracy
 - Peizer-Pratt inversion
 - American binomial model behavior
+- trinomial price and standard-Greek convergence against Black-Scholes-Merton
+- trinomial early-exercise behavior and immutable bump operations
 - all 36 Bjerksund-Stensland 2002 values from Haug table 3-2
 - bivariate normal identities and perfect-correlation limits
 - Bjerksund-Stensland expiry, no-arbitrage bounds and numerical fallback
