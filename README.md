@@ -86,17 +86,17 @@ the native CDF should enable native access for the unnamed module:
 
 ## Releases
 
-Starting with version 2.0.0, releases are published to Maven Central under
+Starting with version 2.0.1, releases are published to Maven Central under
 `io.github.iamchorchos:thegreeklab` and remain available from
 [GitHub Releases](https://github.com/iamchorchos/theGreekLab/releases).
 
-After 2.0.0 is released, add the library to a Maven project with:
+Add the library to a Maven project with:
 
 ```xml
 <dependency>
     <groupId>io.github.iamchorchos</groupId>
     <artifactId>thegreeklab</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
 </dependency>
 ```
 
@@ -144,13 +144,13 @@ protected API with that explicit baseline using japicmp:
 Windows PowerShell:
 
 ```powershell
-.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.0.0"
+.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.0.1"
 ```
 
 Linux/macOS:
 
 ```bash
-./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.0.0
+./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.0.1
 ```
 
 The compatibility profile fails on binary- or source-incompatible changes and

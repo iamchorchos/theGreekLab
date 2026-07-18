@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [2.0.1] - 2026-07-18
+
+### Fixed
+
+- Resolve the CI-friendly `${revision}` property in the POM deployed to Maven
+  Central and validate it against the release tag before publication.
+
 ## [2.0.0] - 2026-07-18
 
 ### Changed

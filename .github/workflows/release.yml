@@ -60,6 +60,13 @@ jobs:
             src/main/fortran/pbivnorm.f \
             -o src/main/resources/native/linux-x86_64/libpbivnorm.so
 
+      - name: Validate published POM version
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ./mvnw -B -ntp -Drevision="$EXPECTED_VERSION" -DskipTests process-resources
+          python3 -c 'import os, xml.etree.ElementTree as ET; root = ET.parse(".flattened-pom.xml").getroot(); actual = root.find("{http://maven.apache.org/POM/4.0.0}version").text; expected = os.environ["EXPECTED_VERSION"]; assert actual == expected, f"Expected POM version {expected}, got {actual}"'
+
       - name: Verify, sign and publish to Maven Central
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

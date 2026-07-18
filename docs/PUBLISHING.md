@@ -28,8 +28,8 @@ Prepare and verify the release on `main`, then create and push an annotated
 semantic-version tag:
 
 ```bash
-git tag -a v2.0.0 -m "Release v2.0.0"
-git push origin v2.0.0
+git tag -a v2.0.1 -m "Release v2.0.1"
+git push origin v2.0.1
 ```
 
 The release workflow validates the tag, builds the Linux native library, runs
@@ -37,6 +37,8 @@ the complete Maven verification lifecycle, creates the source and Javadoc
 JARs, signs every required artifact, and publishes them through the Central
 Portal. It waits until Central reports the deployment as published before it
 creates or updates the corresponding GitHub Release and checksums.
+Before uploading, the workflow also verifies that the flattened consumer POM
+contains the literal version derived from the release tag.
 
 Maven Central releases are immutable. Never reuse a version number or move a
 published release tag. If publishing fails before completion, inspect the
@@ -49,7 +51,7 @@ The Central profile can be loaded and the release artifacts can be assembled
 without uploading or requiring signing credentials:
 
 ```bash
-./mvnw -Pcentral-release -Dgpg.skip=true \
+./mvnw -Pcentral-release -Drevision=2.0.1 -Dgpg.skip=true \
   -Dcentral.skipPublishing=true clean verify
 ```
 
