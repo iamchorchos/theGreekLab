@@ -12,6 +12,9 @@ import net.jafama.FastMath;
 
 import java.util.Objects;
 
+import static com.thegreeklab.finance.validation.PricingValidation.requireAmericanStyle;
+import static com.thegreeklab.finance.validation.PricingValidation.requireValidSteps;
+
 /**
  * Shared base class for American-option binomial trees.
  *
@@ -75,12 +78,8 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
     public BinomialModel(OptionContract contract, MarketData frame, int steps) {
         Objects.requireNonNull(contract, "Contract cannot be null.");
         Objects.requireNonNull(frame, "Market data frame cannot be null.");
-        if (steps <= 0) throw new InvalidStepCountException("Steps must be positive.");
-        if (contract.option() != Option.AMERICAN) {
-            throw new UnsupportedExerciseStyleException(
-                    "Binomial American models only support AMERICAN option style. Received: " + contract.option()
-            );
-        }
+        requireValidSteps(steps);
+        requireAmericanStyle(contract);
 
         this.type = contract.type();
         this.steps = steps;

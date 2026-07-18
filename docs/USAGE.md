@@ -36,8 +36,9 @@ The `StandardGreeks` interface exposes:
 - `greeks()`, returning an immutable `StandardGreekValues` snapshot
 
 `BjerksundStensland` implements this standard surface with numerical
-bump-and-revalue estimates. The full `Greeks` interface extends
-`StandardGreeks` with:
+bump-and-revalue estimates. `TrinomialTree` obtains delta, gamma and theta
+directly from tree nodes and uses immutable bumped copies for vega and rho.
+The full `Greeks` interface extends `StandardGreeks` with:
 
 - `vanna()`
 - `volga()`
@@ -260,6 +261,76 @@ double gamma = model.gamma();
 double vega = model.vega();
 double rho = model.rho();
 ```
+
+## Trinomial Tree
+
+`TrinomialTree` is a recombining tree for European and American vanilla
+options. It supports every `MarketData` implementation through the generalized
+cost-of-carry parameter. American contracts are checked for early exercise at
+every node; European contracts use continuation value only.
+
+```java
+import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.enums.Option;
+import com.thegreeklab.finance.enums.OptionType;
+import com.thegreeklab.finance.frame.EquityFrame;
+import com.thegreeklab.finance.model.american.trinomial.TrinomialTree;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+
+ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+ZonedDateTime expiry = now.plusMonths(6);
+
+OptionContract put = new OptionContract(
+        "AAPL",
+        OptionType.PUT,
+        Option.AMERICAN,
+        210.0,
+        expiry,
+        100
+);
+
+EquityFrame frame = new EquityFrame(
+        now,
+        205.35,
+        0.045,
+        0.005
+);
+
+TrinomialTree model = new TrinomialTree(put, frame, 0.22, 301);
+
+double price = model.price();
+double delta = model.delta();
+double gamma = model.gamma();
+double theta = model.theta();
+double vega = model.vega();
+double rho = model.rho();
+
+var values = model.greeks();
+```
+
+The model is immutable and thread-safe. Its bump methods create independent
+models, leaving the original valuation unchanged:
+
+```java
+TrinomialTree spotScenario = model.withSpot(210.0);
+TrinomialTree volatilityScenario = model.withVolatility(0.24);
+TrinomialTree rateScenario = model.withRiskFreeRate(0.05);
+long oneDayNanos = 86_400_000_000_000L;
+TrinomialTree tomorrow = model.withTimestamp(frame.timestampNanos() + oneDayNanos);
+```
+
+The step count must also satisfy the positivity condition
+`steps >= floor(b^2 T / (2 sigma^2)) + 1`, where `b` is cost of carry and `T`
+is time to expiry. The implementation supports at most `10_000` steps to bound
+memory allocation and the tree's quadratic runtime. A count outside the
+supported interval produces `InvalidStepCountException`.
+Delta, gamma and theta come from the first tree level. Vega uses a one
+percentage-point volatility bump and rho uses a one-basis-point rate bump;
+both are returned per unit change in their input. For central differences, the
+two bumped valuations use the same tree depth, automatically increased when a
+bump would otherwise violate the probability-positivity condition.
 
 ## Bjerksund-Stensland 2002 American Option
 

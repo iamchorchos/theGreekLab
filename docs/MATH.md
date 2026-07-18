@@ -794,6 +794,131 @@ e^{-r\Delta t}\left(pV_{j+1,i+1}+(1-p)V_{j+1,i}\right)
 \right)
 ```
 
+## Trinomial Tree
+
+The recombining trinomial model divides maturity into $N$ equal steps:
+
+```math
+\Delta t = \frac{T}{N}
+```
+
+The up, middle and down spot multipliers are:
+
+```math
+u=e^{\sigma\sqrt{2\Delta t}}, \qquad m=1, \qquad d=\frac{1}{u}
+```
+
+Define:
+
+```math
+a=e^{\sigma\sqrt{\Delta t/2}}, \qquad c=e^{b\Delta t/2}
+```
+
+The risk-neutral transition probabilities are:
+
+```math
+p_u=\left(\frac{c-a^{-1}}{a-a^{-1}}\right)^2
+```
+
+```math
+p_d=\left(\frac{a-c}{a-a^{-1}}\right)^2
+```
+
+```math
+p_m=1-p_u-p_d
+```
+
+To prevent negative transition probabilities, the implementation follows the
+step-count condition:
+
+```math
+N \geq \left\lfloor\frac{b^2T}{2\sigma^2}\right\rfloor+1
+```
+
+It also validates that all three probabilities are finite, belong to
+$[0,1]$, and sum to one within numerical tolerance. The implementation limits
+$N$ to $10\,000$ so that array sizing cannot overflow and the $O(N^2)$
+rollback remains bounded.
+
+At level $i$, node $j\in\{0,\ldots,2i\}$ has spot price:
+
+```math
+S_{i,j}=S u^{j-i}
+```
+
+For $z=1$ for a call and $z=-1$ for a put, the terminal payoff is:
+
+```math
+V_{N,j}=\max\left(z(S_{N,j}-K),0\right)
+```
+
+The continuation value is:
+
+```math
+C_{i,j}=e^{-r\Delta t}
+\left(p_dV_{i+1,j}+p_mV_{i+1,j+1}+p_uV_{i+1,j+2}\right)
+```
+
+European contracts use $V_{i,j}=C_{i,j}$. American contracts compare the
+continuation value with immediate exercise:
+
+```math
+V_{i,j}=\max\left(z(S_{i,j}-K),C_{i,j}\right)
+```
+
+## Trinomial Greeks
+
+Price, delta, gamma and theta are obtained during one backward induction. Let
+$V_d$, $V_m$ and $V_u$ denote the down, middle and up values at the first tree
+level, with corresponding spots $S/u$, $S$ and $Su$.
+
+Delta spans the full first level:
+
+```math
+\Delta=\frac{V_u-V_d}{Su-S/u}
+```
+
+For gamma, first calculate adjacent deltas:
+
+```math
+\Delta_u=\frac{V_u-V_m}{Su-S}, \qquad
+\Delta_d=\frac{V_m-V_d}{S-S/u}
+```
+
+and then:
+
+```math
+\Gamma=\frac{\Delta_u-\Delta_d}{(Su-S/u)/2}
+```
+
+Theta uses the middle node one step forward in calendar time:
+
+```math
+\Theta=\frac{V_m-V_{0,0}}{\Delta t}
+```
+
+Vega is a bump-and-revalue estimate with $h_\sigma=0.01$:
+
+```math
+\text{Vega}\approx
+\frac{V(\sigma+h_\sigma)-V(\sigma-h_\sigma)}{2h_\sigma}
+```
+
+If the lower volatility is outside the supported domain, the implementation
+uses the forward difference $(V(\sigma+h_\sigma)-V(\sigma))/h_\sigma$.
+Rho uses a central one-basis-point bump, $h_r=10^{-4}$:
+
+```math
+\rho\approx\frac{V(r+h_r)-V(r-h_r)}{2h_r}
+```
+
+Vega and rho are reported per unit change in volatility and rate. Immutable
+model copies exposed through `BumpableOptionModel` provide the same spot,
+volatility, rate and timestamp scenario repricing used by these calculations.
+For each central difference, both bumped valuations use the same depth. The
+implementation raises that common depth when either bumped parameter set would
+otherwise violate the trinomial probability-positivity condition.
+
 ## Binomial Greeks
 
 Binomial model Greeks are finite-difference based. The implementation uses:
