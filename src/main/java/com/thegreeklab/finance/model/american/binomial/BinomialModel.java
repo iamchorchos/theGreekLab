@@ -108,10 +108,7 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
         this.contract = contract;
         this.frame = frame;
         this.dayCountConvention = dayCountConvention;
-        this.tNow = dayCountConvention.timeToExpiry(
-                this.frame.timestampNanos(),
-                this.contract.expirationDate()
-        );
+        this.tNow = timeToExpiry;
     }
 
 

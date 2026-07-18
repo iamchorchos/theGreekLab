@@ -65,20 +65,43 @@ class TrinomialTreeTest {
     }
 
     @Test
-    void bumpsPreserveOriginal() {
+    void bumpsPreserveState() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         ZonedDateTime expiry = now.plusNanos((long) (SECONDS_IN_YEAR * 1_000_000_000L));
         OptionContract contract = contract(expiry, Option.EUROPEAN, OptionType.CALL);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
         TrinomialTree original = new TrinomialTree(contract, frame, 0.20, 200, ACT_360);
         double originalPrice = original.price();
+        long laterTimestamp = frame.timestampNanos() + 86_400_000_000_000L;
 
-        TrinomialTree bumped = original.withSpot(101.0);
+        TrinomialTree spotBumped = original.withSpot(101.0);
+        TrinomialTree volatilityBumped = original.withVolatility(0.25);
+        TrinomialTree rateBumped = original.withRiskFreeRate(0.06);
+        TrinomialTree timeBumped = original.withTimestamp(laterTimestamp);
 
         assertEquals(originalPrice, original.price());
         assertEquals(ACT_360, original.dayCountConvention());
-        assertEquals(ACT_360, bumped.dayCountConvention());
-        assertTrue(bumped.price() > originalPrice);
+        assertEquals(ACT_360, spotBumped.dayCountConvention());
+        assertEquals(ACT_360, volatilityBumped.dayCountConvention());
+        assertEquals(ACT_360, rateBumped.dayCountConvention());
+        assertEquals(ACT_360, timeBumped.dayCountConvention());
+        assertTrue(spotBumped.price() > originalPrice);
+        assertEquals(
+                new TrinomialTree(contract, frame, 0.25, 200, ACT_360).price(),
+                volatilityBumped.price()
+        );
+        assertEquals(
+                new TrinomialTree(
+                        contract, frame.withRiskFreeRate(0.06), 0.20, 200, ACT_360
+                ).price(),
+                rateBumped.price()
+        );
+        assertEquals(
+                new TrinomialTree(
+                        contract, frame.withTimestampNanos(laterTimestamp), 0.20, 200, ACT_360
+                ).price(),
+                timeBumped.price()
+        );
     }
 
     @Test
