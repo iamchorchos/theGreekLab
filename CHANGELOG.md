@@ -6,6 +6,19 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Immutable deterministic `CashDividend` and chronologically ordered
+  `DividendSchedule` domain types.
+- Simple, Haug-Haug, Bos-Gairat-Shepeleva and Bos-Vandermark European
+  discrete-dividend approximations.
+- Model-specific adjusted spot, strike and volatility inputs, immutable bump
+  scenarios and five numerical standard Greeks for discrete-dividend models.
+- Published numerical reference tests and public usage and mathematical
+  documentation for the discrete-dividend API.
+- Central source register covering model publications, numerical fixtures,
+  third-party code provenance and external libraries.
+
 ## [2.0.1] - 2026-07-18
 
 ### Fixed

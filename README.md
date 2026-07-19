@@ -31,6 +31,9 @@ numerical tests for vanilla European and American option models.
   - Black-Scholes-Merton for equity options
   - Black-76 for futures options
   - Garman-Kohlhagen for FX options
+  - deterministic discrete cash-dividend schedules
+  - Simple, Haug-Haug, Bos-Gairat-Shepeleva and Bos-Vandermark
+    discrete-dividend approximations
 - American option pricing:
   - Cox-Ross-Rubenstein binomial tree
   - Leisen-Reimer binomial tree
@@ -43,6 +46,7 @@ numerical tests for vanilla European and American option models.
   - price, delta, gamma, vega, theta and rho across supported pricing models
   - immutable `StandardGreekValues` snapshots for retrieving them together
   - numerical standard Greeks for Bjerksund-Stensland 2002
+  - bump-and-revalue standard Greeks for all discrete-dividend approximations
   - node-based delta, gamma and theta plus bumped vega and rho for the
     trinomial tree
   - vanna, volga, charm, speed, lambda
@@ -277,6 +281,7 @@ Full examples for every supported model and volatility utility are available in
 
 - [Usage guide](docs/USAGE.md)
 - [Mathematical notes](docs/MATH.md)
+- [Sources and references](docs/REFERENCES.md)
 - [Publishing guide](docs/PUBLISHING.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing guide](CONTRIBUTING.md)
@@ -295,6 +300,7 @@ src/main/java/com/thegreeklab
     binomial/                 CRR and Leisen-Reimer trees
     trinomial/                recombining trinomial tree
   finance/model/european/     European option models
+    discrete/                 cash dividends, schedules and adjustment models
   finance/model/greeks/       Greeks interface
   finance/numerical/          numerical utilities
   math/                       volatility, distributions and numerical helpers
@@ -310,6 +316,12 @@ src/test/resources            numerical reference datasets
 
 - The library separates contract data from market data.
 - European models accept only European contracts.
+- Discrete-dividend models require an `EquityFrame` with zero continuous
+  dividend yield and include only cash dividends strictly between valuation
+  and expiration.
+- `DividendSchedule` is immutable and sorts entries chronologically.
+- Discrete-dividend approximations expose their adjusted spot, strike and
+  volatility, plus immutable bump scenarios and five numerical standard Greeks.
 - American binomial models accept only American contracts.
 - The trinomial tree accepts European and American vanilla contracts and
   supports immutable scenario repricing through `BumpableOptionModel`.
@@ -338,11 +350,16 @@ The test suite covers:
 - American binomial model behavior
 - trinomial price and standard-Greek convergence against Black-Scholes-Merton
 - trinomial early-exercise behavior and immutable bump operations
+- published Haug-Haug and Bos-Vandermark discrete-dividend reference values
+- discrete-dividend input adjustments, schedule filtering and numerical Greeks
 - all 36 Bjerksund-Stensland 2002 values from Haug table 3-2
 - bivariate normal identities and perfect-correlation limits
 - Bjerksund-Stensland expiry, no-arbitrage bounds and numerical fallback
 - Bjerksund-Stensland Greeks in the European limit and American exercise region
-- CRR price cross-validation against generated reference data
+- CRR model behavior, identities and numerical Greeks
+
+The publications, table references, fixture provenance and numerical-data
+limitations are recorded in [Sources and references](docs/REFERENCES.md).
 
 ## Licensing
 

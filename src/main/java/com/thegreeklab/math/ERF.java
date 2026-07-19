@@ -7,9 +7,11 @@ import net.jafama.FastMath;
  * built on top of it, used throughout the pricing engine wherever {@code N(x)}
  * or {@code N'(x)} appears in the Black-Scholes-Merton formulas.
  *
- * <p>{@link #erfc} implements W. J. Cody's rational Chebyshev approximation
- * (as used in, e.g., the Numerical Recipes / SPECFUN reference implementations),
- * split into three regions ({@code |x| <= 0.46875}, {@code 0.46875 < |x| <= 4},
+ * <p>{@link #erfc} implements W. J. Cody's rational Chebyshev approximation.
+ * Its interval structure and published coefficients follow Cody's
+ * <a href="https://netlib.org/specfun/erf">CALERF reference routine</a> from
+ * Netlib SPECFUN. The calculation is split into three regions
+ * ({@code |x| <= 0.46875}, {@code 0.46875 < |x| <= 4},
  * {@code |x| > 4}), each with its own set of rational polynomial coefficients
  * ({@link #A}/{@link #B}, {@link #C}/{@link #D}, {@link #P}/{@link #Q}
  * respectively) chosen to keep relative error within machine precision across

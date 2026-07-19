@@ -10,6 +10,7 @@ Notation:
 - $T$ - time to expiry in years
 - $r$ - risk-free rate
 - $q$ - continuous dividend yield
+- $D_i$ - deterministic cash dividend paid at time $t_i$
 - $r_f$ - foreign risk-free rate
 - $b$ - cost of carry
 - $\sigma$ - annualized volatility
@@ -117,6 +118,237 @@ Put:
 ```math
 P = K e^{-rT}N(-d_2) - S e^{-qT}N(-d_1)
 ```
+
+## Discrete Cash Dividend Approximations
+
+Let the applicable deterministic dividend schedule be
+$(D_i,t_i)_{i=1}^{n}$, ordered so that:
+
+```math
+0 < t_1 < \dots < t_n < T
+```
+
+The implementation includes only ex-dividend timestamps strictly between the
+valuation timestamp and expiration. Dividend amounts must be positive and
+finite. These models require an `EquityFrame` with $q=0$ because the discrete
+schedule is the complete dividend input.
+
+The time-zero present value of the applicable schedule is:
+
+```math
+PV_D = \sum_{i=1}^{n} D_i e^{-rt_i}
+```
+
+Except for Bos-Vandermark, the adjusted or escrowed spot is:
+
+```math
+S^* = S-PV_D
+```
+
+The adjusted inputs are passed to the no-continuous-yield
+Black-Scholes-Merton formula:
+
+```math
+V_{DD} \approx V_{BSM}(S^*,K^*,T,r,0,\sigma^*)
+```
+
+### Simple volatility adjustment (Vol1)
+
+The Simple model retains the original strike and scales volatility by the
+ratio of original to escrowed spot:
+
+```math
+K^*=K, \qquad
+\sigma^*=\sigma\frac{S}{S-PV_D}
+```
+
+The method is $O(n)$. Discounting reflects dividend dates, but the volatility
+scaling does not otherwise distinguish an early dividend from a late one.
+
+### Haug-Haug adjustment (Vol2)
+
+Define $t_0=0$ and the remaining dividend PV immediately before interval $j$:
+
+```math
+R_j=\sum_{k=j}^{n}D_k e^{-rt_k}
+```
+
+For the interval $(t_{j-1},t_j)$, Haug-Haug uses:
+
+```math
+\sigma_j=\sigma\frac{S}{S-R_j}
+```
+
+After the final dividend the interval volatility returns to the original
+$\sigma$. The time-weighted annualized variance is:
+
+```math
+(\sigma^*)^2=
+\frac{
+\sum_{j=1}^{n}\sigma_j^2(t_j-t_{j-1})
++\sigma^2(T-t_n)
+}{T}
+```
+
+The adjusted spot is $S-PV_D$, the strike is unchanged, and the implementation
+is $O(n)$ because it updates $R_j$ incrementally.
+
+### Bos-Gairat-Shepeleva adjustment (Vol3)
+
+Let:
+
+```math
+s=\ln S, \qquad
+x=\ln\left((K+PV_D)e^{-rT}\right)
+```
+
+```math
+z_1=\frac{s-x}{\sigma\sqrt{T}}+\frac{\sigma\sqrt{T}}{2},
+\qquad
+z_2=\frac{s-x}{\sigma\sqrt{T}}+\sigma\sqrt{T}
+```
+
+Define the dividend correction sums:
+
+```math
+A_1=\sum_{i=1}^{n}D_i e^{-rt_i}
+\left[
+N(z_1)-N\left(z_1-\frac{\sigma t_i}{\sqrt{T}}\right)
+\right]
+```
+
+```math
+A_2=\sum_{i=1}^{n}\sum_{j=1}^{n}
+D_iD_j e^{-r(t_i+t_j)}
+\left[
+N(z_2)-N\left(
+z_2-\frac{2\sigma\min(t_i,t_j)}{\sqrt{T}}
+\right)
+\right]
+```
+
+The adjusted volatility implemented by the library is:
+
+```math
+\sigma^*=\sqrt{
+\sigma^2
++\sigma\sqrt{\frac{\pi}{2T}}
+\left[
+4e^{z_1^2/2-s}A_1
++e^{z_2^2/2-2s}A_2
+\right]
+}
+```
+
+The adjusted spot is $S-PV_D$, the strike is unchanged, and the double sum
+makes this implementation $O(n^2)$.
+
+### Bos-Vandermark spot-strike adjustment
+
+Bos-Vandermark splits each discounted dividend linearly according to its
+position within the option lifetime. The near and far present-value components
+are:
+
+```math
+X_n=\sum_{i=1}^{n}\frac{T-t_i}{T}D_i e^{-rt_i}
+```
+
+```math
+X_f^{PV}=\sum_{i=1}^{n}\frac{t_i}{T}D_i e^{-rt_i}
+```
+
+Consequently:
+
+```math
+X_n+X_f^{PV}=PV_D
+```
+
+The pricing inputs are:
+
+```math
+S^*=S-X_n
+```
+
+```math
+K^*=K+e^{rT}X_f^{PV}
+=K+\sum_{i=1}^{n}\frac{t_i}{T}D_i e^{r(T-t_i)}
+```
+
+```math
+\sigma^*=\sigma
+```
+
+An early dividend is assigned mostly to the spot adjustment, whereas a late
+dividend is assigned mostly to the strike adjustment. The split is evaluated
+in one pass, so the method is $O(n)$.
+
+### Numerical Greeks for discrete-dividend models
+
+The library bumps the original, unadjusted market inputs and then recomputes
+the complete dividend adjustment. This is different from applying analytical
+Black-Scholes Greeks only to frozen adjusted inputs.
+
+Delta, gamma and rho use central differences:
+
+```math
+\Delta\approx\frac{V(S+h_S)-V(S-h_S)}{2h_S}
+```
+
+```math
+\Gamma\approx
+\frac{V(S+h_\Gamma)-2V(S)+V(S-h_\Gamma)}{h_\Gamma^2}
+```
+
+```math
+\rho\approx\frac{V(r+h_r)-V(r-h_r)}{2h_r}
+```
+
+Vega uses the valid local volatility interval, including its actual width when
+the lower endpoint is clipped at `PricingValidation.MIN_VOLATILITY`. Theta is
+a forward timestamp difference:
+
+```math
+\Theta\approx
+\frac{V(t+\Delta t)-V(t)}{\Delta t_{\text{years}}}
+```
+
+The default bumps are:
+
+| Greek | Bump |
+| --- | --- |
+| delta | $\min(\max(10^{-4}S,10^{-6}),0.5S)$ |
+| gamma | $\min(\max(10^{-3}S,10^{-6}),0.5S)$ |
+| vega | $\max(10^{-4}\sigma,10^{-6})$ |
+| rho | $10^{-4}$ (one basis point) |
+| theta | at most one calendar day and at most half the remaining time |
+
+Only dividends applicable after the bumped timestamp are retained. Theta can
+therefore be non-smooth when the bump crosses an ex-dividend timestamp.
+
+### Complexity and limitations
+
+| Model | Time | Additional space |
+| --- | --- | --- |
+| Simple | $O(n)$ | $O(n)$ shared schedule preparation |
+| Haug-Haug | $O(n)$ | $O(n)$ shared schedule preparation |
+| Bos-Gairat-Shepeleva | $O(n^2)$ | $O(n)$ shared schedule preparation |
+| Bos-Vandermark | $O(n)$ | $O(n)$ shared schedule preparation |
+
+All four methods are analytical approximations, not exact discrete-jump
+solutions. Their accuracy can deteriorate for large dividends, long maturities
+or dense schedules. The reference suite includes published Haug-Haug and
+Bos-Vandermark values from Haug, Haug and Lewis (2003). The original methods
+are described in:
+
+- Bos and Vandermark, “Finessing Fixed Dividends,” Risk 15(9), 2002.
+- Bos, Gairat and Shepeleva, “Dealing with Discrete Dividends,” Risk 16(1),
+  2003.
+- Haug, Haug and Lewis, “Back to Basics: A New Approach to the Discrete
+  Dividend Problem,” Wilmott, 2003.
+
+Full bibliographic details and the mapping from each source to the
+implementation and reference tests are maintained in
+[REFERENCES.md](REFERENCES.md).
 
 ## Black-76
 

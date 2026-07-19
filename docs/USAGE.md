@@ -83,6 +83,11 @@ European Black-Scholes-style models also expose:
 `Black76` intentionally does not support `epsilon()`, because the model takes
 the futures price directly and has no dividend-yield or foreign-rate input.
 
+The European discrete-dividend models implement `DiscreteDividendOptionModel`.
+They expose the same standard price and Greek surface, immutable spot,
+volatility, rate and timestamp scenarios, and their model-specific
+`adjustedSpot()`, `adjustedStrike()` and `adjustedVolatility()` inputs.
+
 ## Black-Scholes-Merton Equity Option
 
 ```java
@@ -129,6 +134,99 @@ double epsilon = model.epsilon();
 double veta = model.veta();
 double parmicharma = model.parmicharma();
 ```
+
+## European Option with Discrete Cash Dividends
+
+Use `CashDividend` for a deterministic cash amount paid per unit of the
+underlying and `DividendSchedule` for an immutable chronological schedule.
+The schedule constructor copies and sorts its input. Pricing includes only
+dividends whose ex-dividend timestamps are strictly after valuation and
+strictly before option expiration.
+
+Discrete cash dividends must not be combined with a continuous dividend yield
+in the same valuation. Set `EquityFrame.dividendYield()` to `0.0` to avoid
+counting dividends twice.
+
+```java
+import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.enums.Option;
+import com.thegreeklab.finance.enums.OptionType;
+import com.thegreeklab.finance.frame.EquityFrame;
+import com.thegreeklab.finance.model.european.discrete.CashDividend;
+import com.thegreeklab.finance.model.european.discrete.DividendSchedule;
+import com.thegreeklab.finance.model.european.discrete.adjustments.BosVandermark;
+import com.thegreeklab.finance.model.european.discrete.adjustments.DiscreteDividendOptionModel;
+import com.thegreeklab.finance.model.greeks.StandardGreekValues;
+import com.thegreeklab.finance.time.DayCountConvention;
+import com.thegreeklab.finance.time.EpochNanos;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.List;
+
+ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+ZonedDateTime expiry = now.plusYears(1);
+
+OptionContract call = new OptionContract(
+        "AAPL",
+        OptionType.CALL,
+        Option.EUROPEAN,
+        210.0,
+        expiry,
+        100
+);
+
+EquityFrame frame = new EquityFrame(
+        now,
+        205.35,
+        0.045,
+        0.0
+);
+
+DividendSchedule schedule = new DividendSchedule(List.of(
+        new CashDividend(EpochNanos.from(now.plusMonths(3)), 0.25),
+        new CashDividend(EpochNanos.from(now.plusMonths(6)), 0.25),
+        new CashDividend(EpochNanos.from(now.plusMonths(9)), 0.25)
+));
+
+DiscreteDividendOptionModel model = new BosVandermark(
+        call,
+        frame,
+        schedule,
+        0.22,
+        DayCountConvention.ACT_365F
+);
+
+double adjustedSpot = model.adjustedSpot();
+double adjustedStrike = model.adjustedStrike();
+double adjustedVolatility = model.adjustedVolatility();
+double price = model.price();
+StandardGreekValues greeks = model.greeks();
+
+double higherSpotPrice = model.withSpot(210.0).price();
+double higherVolatilityPrice = model.withVolatility(0.24).price();
+```
+
+Available approximations:
+
+| Class | Spot adjustment | Strike adjustment | Volatility adjustment | Cost |
+| --- | --- | --- | --- | --- |
+| `SimpleVolatilityAdjustment` | full dividend PV | none | simple spot ratio | $O(n)$ |
+| `HaugHaugAdjustment` | full dividend PV | none | time-weighted interval variance | $O(n)$ |
+| `BosGairatShepeleva` | full dividend PV | none | analytical dividend correction | $O(n^2)$ |
+| `BosVandermark` | near-dividend PV | far-dividend value | none | $O(n)$ |
+
+All four classes are approximations. The Simple model is the least sensitive
+to dividend timing. Haug-Haug and Bos-Gairat-Shepeleva incorporate timing into
+volatility, while Bos-Vandermark divides each dividend between spot and strike.
+Results can deteriorate for very large dividends or long, dense schedules, so
+production use should compare the selected approximation with an independently
+validated numerical model over the intended parameter range.
+
+Delta, gamma, vega and rho reprice the complete adjustment after bumping the
+original market input. Theta advances the valuation timestamp and therefore
+also updates the applicable schedule. It can change sharply when its bump
+crosses an ex-dividend timestamp.
 
 ## Garman-Kohlhagen FX Option
 
@@ -504,6 +602,9 @@ DoubleList prices = new DoubleArrayList(new double[]{
 
 double volatility = VolatilityCalculator.historicalVolatility(prices, 252);
 ```
+
+For the publications behind the pricing models and adjustments, and for the
+provenance of numerical test data, see [Sources and references](REFERENCES.md).
 
 ## Parkinson Volatility
 
