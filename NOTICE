@@ -4,6 +4,17 @@ Copyright (c) 2026 Olivier Chorchos
 The original Java source code, tests and documentation are licensed under the
 MIT License.
 
+The ERF implementation uses the rational approximation, interval structure
+and published coefficients of W. J. Cody's CALERF algorithm:
+
+    W. J. Cody, "Rational Chebyshev Approximations for the Error Function,"
+    Mathematics of Computation 23 (1969), 631-637.
+    https://doi.org/10.1090/S0025-5718-1969-0247736-4
+    https://netlib.org/specfun/erf
+
+The Java implementation is maintained by TheGreekLab. The Netlib Fortran
+CALERF routine itself is not distributed with this project.
+
 Native pbivnorm component
 -------------------------
 

@@ -5,6 +5,7 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
+import com.thegreeklab.finance.frame.EquityFrame;
 
 /**
  * Shared validation rules for option-pricing model inputs.
@@ -56,6 +57,35 @@ public final class PricingValidation {
         if (contract.option() != Option.AMERICAN) {
             throw new UnsupportedExerciseStyleException(
                     "Binomial American models only support AMERICAN option style. Received: " + contract.option()
+            );
+        }
+    }
+
+    /**
+     * Ensures that a contract has European exercise style.
+     *
+     * @param contract option contract to validate
+     * @throws UnsupportedExerciseStyleException if the contract is not European
+     */
+    public static void requireEuropeanStyle(OptionContract contract) {
+        if (contract.option() != Option.EUROPEAN) {
+            throw new UnsupportedExerciseStyleException(
+                    "Supported only European option style. Received: " + contract.option()
+            );
+        }
+    }
+
+    /**
+     * Ensures that an equity frame does not introduce a continuous dividend
+     * yield alongside a discrete cash-dividend model.
+     *
+     * @param frame equity market data to validate
+     * @throws IllegalArgumentException if the continuous dividend yield is non-zero
+     */
+    public static void requireNoContinuousDividendYield(EquityFrame frame) {
+        if (frame.dividendYield() != 0.0) {
+            throw new IllegalArgumentException(
+                    "Continuous dividend yield must be zero."
             );
         }
     }
