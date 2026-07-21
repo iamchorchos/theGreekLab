@@ -267,6 +267,11 @@ class RollGeskeWhaleyTest {
                         1e-12
                 ),
                 () -> assertEquals(ACT_360, model.dayCountConvention()),
+                () -> assertEquals(
+                        model.withVolatility(0.26).price(),
+                        model.priceAtVolatility(0.26),
+                        1e-12
+                ),
                 () -> assertEquals(originalPrice, model.price(), 1e-12)
         );
     }

@@ -121,6 +121,31 @@ class ImpliedVolatilityTest {
     }
 
     @Test
+    void searchesToValidDomainEdgeBeforeReportingFailure() {
+        VolatilityPricer model = volatility -> {
+            if (volatility > 0.40) {
+                throw new InvalidModelDomainException(
+                        "Unsupported trial volatility: " + volatility
+                );
+            }
+            return 100.0 * volatility;
+        };
+
+        ImpliedVolatilityResult result = VolatilityCalculator.solveImpliedVolatility(
+                model, 50.0, 0.20
+        );
+
+        assertEquals(
+                ImpliedVolatilityResult.Status.INVALID_MODEL_DOMAIN,
+                result.status()
+        );
+        assertEquals(0.40, result.volatility(), TOLERANCE);
+        assertEquals(40.0, result.modelPrice(), TOLERANCE);
+        assertEquals(-10.0, result.priceError(), TOLERANCE);
+        assertTrue(result.iterations() > 2);
+    }
+
+    @Test
     void reportsEuropeanPriceOutsideBounds() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         OptionContract contract = new OptionContract(

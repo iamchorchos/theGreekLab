@@ -91,6 +91,10 @@ class TrinomialTreeTest {
                 volatilityBumped.price()
         );
         assertEquals(
+                volatilityBumped.price(),
+                original.priceAtVolatility(0.25)
+        );
+        assertEquals(
                 new TrinomialTree(
                         contract, frame.withRiskFreeRate(0.06), 0.20, 200, ACT_360
                 ).price(),

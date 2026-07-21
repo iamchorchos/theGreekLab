@@ -351,28 +351,32 @@ public final class VolatilityCalculator {
             }
 
             double trialError = tryPriceError(model, trialVolatility, marketPrice);
-            if (Double.isFinite(trialError)) {
-                if (priceConverged(trialError, marketPrice)) {
-                    return result(
-                            ImpliedVolatilityResult.Status.CONVERGED,
-                            trialVolatility,
-                            trialError,
-                            marketPrice,
-                            iterations
-                    );
-                }
-                if (differentSigns(validError, trialError)) {
-                    return brent(model, marketPrice, validVolatility, trialVolatility,
-                            validError, trialError, BRENT_TOLERANCE,
-                            BRENT_MAX_ITERATIONS, iterations);
-                }
-                validVolatility = trialVolatility;
-                validError = trialError;
-                continue;
+            if (!Double.isFinite(trialError)) {
+                return searchValidDomainEdge(
+                        model,
+                        marketPrice,
+                        validVolatility,
+                        validError,
+                        trialVolatility,
+                        iterations
+                );
             }
-
-            return searchValidDomainEdge(model, marketPrice, validVolatility,
-                    validError, trialVolatility, iterations);
+            if (priceConverged(trialError, marketPrice)) {
+                return result(
+                        ImpliedVolatilityResult.Status.CONVERGED,
+                        trialVolatility,
+                        trialError,
+                        marketPrice,
+                        iterations
+                );
+            }
+            if (differentSigns(validError, trialError)) {
+                return brent(model, marketPrice, validVolatility, trialVolatility,
+                        validError, trialError, BRENT_TOLERANCE,
+                        BRENT_MAX_ITERATIONS, iterations);
+            }
+            validVolatility = trialVolatility;
+            validError = trialError;
         }
 
         return result(
