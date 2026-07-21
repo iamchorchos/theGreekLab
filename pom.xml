@@ -55,7 +55,7 @@
     </ciManagement>
 
     <properties>
-        <revision>2.0.1-SNAPSHOT</revision>
+        <revision>2.1.0-SNAPSHOT</revision>
         <java.version>22</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
