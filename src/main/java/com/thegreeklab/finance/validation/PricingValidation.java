@@ -2,9 +2,11 @@ package com.thegreeklab.finance.validation;
 
 import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.enums.Option;
+import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
+import com.thegreeklab.finance.exception.UnsupportedOptionTypeException;
 import com.thegreeklab.finance.frame.EquityFrame;
 
 /**
@@ -100,6 +102,20 @@ public final class PricingValidation {
         if (contract.option() == Option.EXOTIC) {
             throw new UnsupportedExerciseStyleException(
                     "Exotic exercise style is not supported."
+            );
+        }
+    }
+
+    /**
+     * Ensures that a contract uses a supported CALL option type.
+     *
+     * @param contract option contract to validate
+     * @throws UnsupportedOptionTypeException if the contract has a PUT option type
+     */
+    public static void requireCall(OptionContract contract) {
+        if (contract.type() != OptionType.CALL) {
+            throw new UnsupportedOptionTypeException(
+                    "Option type must be CALL. Received: " + contract.type()
             );
         }
     }

@@ -1,9 +1,9 @@
 package com.thegreeklab.finance.model.american.binomial;
 
 import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.exception.InvalidModelDomainException;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
-import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.exception.UnsupportedFrameTypeException;
 import com.thegreeklab.finance.frame.FuturesFrame;
@@ -40,7 +40,7 @@ public final class LeisenReimer extends BinomialModel {
      * @throws InvalidVolatilityException        if {@code volatility} is below {@code 1e-6}
      *                                           or is not finite
      * @throws InvalidStepCountException         if {@code steps} is not odd
-     * @throws MathException                     if transformed tree probabilities or
+     * @throws InvalidModelDomainException       if transformed tree probabilities or
      *                                           up/down factors are not usable
      */
     public LeisenReimer(
@@ -72,16 +72,16 @@ public final class LeisenReimer extends BinomialModel {
 
     private void validateTreeParameters(double pPrime) {
         if (isInvalidProbability(this.p)) {
-            throw new MathException("Leisen-Reimer probability p must be finite and between 0 and 1. Received: " + this.p);
+            throw new InvalidModelDomainException("Leisen-Reimer probability p must be finite and between 0 and 1. Received: " + this.p);
         }
         if (isInvalidProbability(pPrime)) {
-            throw new MathException("Leisen-Reimer probability pPrime must be finite and between 0 and 1. Received: " + pPrime);
+            throw new InvalidModelDomainException("Leisen-Reimer probability pPrime must be finite and between 0 and 1. Received: " + pPrime);
         }
         if (!(this.u > 0.0) || !Double.isFinite(this.u)) {
-            throw new MathException("Leisen-Reimer up factor must be strictly positive and finite. Received: " + this.u);
+            throw new InvalidModelDomainException("Leisen-Reimer up factor must be strictly positive and finite. Received: " + this.u);
         }
         if (!(this.d > 0.0) || !Double.isFinite(this.d)) {
-            throw new MathException("Leisen-Reimer down factor must be strictly positive and finite. Received: " + this.d);
+            throw new InvalidModelDomainException("Leisen-Reimer down factor must be strictly positive and finite. Received: " + this.d);
         }
     }
 
@@ -149,5 +149,6 @@ public final class LeisenReimer extends BinomialModel {
     public double getVolatility() {
         return volatility;
     }
+
 
 }

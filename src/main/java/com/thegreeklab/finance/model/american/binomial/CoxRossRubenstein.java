@@ -1,9 +1,9 @@
 package com.thegreeklab.finance.model.american.binomial;
 
 import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.exception.InvalidModelDomainException;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
-import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.time.DayCountConvention;
@@ -35,7 +35,7 @@ public final class CoxRossRubenstein extends BinomialModel {
      * @throws InvalidStepCountException         if {@code steps} is not positive
      * @throws InvalidVolatilityException        if {@code volatility} is below {@code 1e-6}
      *                                           or is not finite
-     * @throws MathException                     if the risk-neutral probability is not finite
+     * @throws InvalidModelDomainException       if the risk-neutral probability is not finite
      *                                           or falls outside {@code [0, 1]}
      */
     public CoxRossRubenstein(
@@ -51,7 +51,7 @@ public final class CoxRossRubenstein extends BinomialModel {
         this.d = 1.0 / this.u;
         this.p = (FastMath.exp(this.costOfCarry * this.dt) - this.d) / (this.u - this.d);
         if (!Double.isFinite(this.p) || this.p < 0.0 || this.p > 1.0) {
-            throw new MathException("Risk-neutral probability must be finite and between 0 and 1. Received: " + this.p);
+            throw new InvalidModelDomainException("Risk-neutral probability must be finite and between 0 and 1. Received: " + this.p);
         }
         this.volatility = volatility;
     }
@@ -128,4 +128,6 @@ public final class CoxRossRubenstein extends BinomialModel {
     public double getVolatility() {
         return volatility;
     }
+
+
 }

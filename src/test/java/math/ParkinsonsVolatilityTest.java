@@ -2,7 +2,7 @@ package math;
 
 import com.thegreeklab.finance.exception.LackingDataException;
 import com.thegreeklab.finance.exception.VolatilityException;
-import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;

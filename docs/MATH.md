@@ -1234,12 +1234,24 @@ Implied volatility solves:
 f(\sigma) = V_{\text{model}}(\sigma) - V_{\text{market}} = 0
 ```
 
-The solver:
+The common solver accepts any `VolatilityPricer`, brackets a sign change and
+uses Brent's method to solve for $\sigma$. This keeps root finding independent
+of the analytical, lattice or approximation model used to produce
+$V_{\text{model}}$.
+
+The European convenience overload additionally:
 
 1. validates European exercise style,
 2. checks model-free no-arbitrage bounds,
-3. builds a volatility bracket,
-4. uses Brent's method to solve for $\sigma$.
+3. creates a Brenner-Subrahmanyan-style initial guess.
+
+Invalid trial points at the edge of a lattice model's numerical domain are
+skipped while the common solver locates a valid bracket.
+
+The diagnostic API reports the terminal status, converged or last valid
+volatility, reproduced model price, residual pricing error and total number of
+bracket/root iterations. Compatibility overloads expose only a converged
+volatility as `OptionalDouble`.
 
 The volatility search interval is:
 

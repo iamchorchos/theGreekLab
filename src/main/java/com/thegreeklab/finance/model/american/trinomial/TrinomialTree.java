@@ -5,12 +5,13 @@ import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.exception.ExpiredContractException;
 import com.thegreeklab.finance.exception.InvalidStepCountException;
+import com.thegreeklab.finance.exception.InvalidModelDomainException;
 import com.thegreeklab.finance.exception.InvalidVolatilityException;
-import com.thegreeklab.finance.exception.MathException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
 import com.thegreeklab.finance.time.DayCountConvention;
+import com.thegreeklab.math.volatility.VolatilityPricer;
 import net.jafama.FastMath;
 
 import java.util.Objects;
@@ -27,7 +28,7 @@ import static com.thegreeklab.finance.validation.PricingValidation.*;
  *
  * <p>Instances are immutable and safe for concurrent reads.</p>
  */
-public final class TrinomialTree implements BumpableOptionModel {
+public final class TrinomialTree implements BumpableOptionModel, VolatilityPricer {
 
     /** Maximum supported depth, bounded for safe allocation and practical quadratic runtime. */
     public static final int MAX_STEPS = 10_000;
@@ -61,7 +62,7 @@ public final class TrinomialTree implements BumpableOptionModel {
      * @throws InvalidStepCountException         if {@code steps} is invalid or too small for positive probabilities
      * @throws UnsupportedExerciseStyleException if the contract uses an exotic exercise style
      * @throws ExpiredContractException          if the contract has expired
-     * @throws MathException                     if transition probabilities are invalid
+     * @throws InvalidModelDomainException       if transition probabilities are invalid
      */
     public TrinomialTree(
             OptionContract contract,
@@ -141,15 +142,16 @@ public final class TrinomialTree implements BumpableOptionModel {
     /** Validates the probability domain and normalization invariant. */
     private void requireValidProbabilities() {
         if (isInvalidProbability(pu) || isInvalidProbability(pm) || isInvalidProbability(pd)) {
-            throw new MathException(
+            throw new InvalidModelDomainException(
                     "Trinomial probabilities must be finite and between 0 and 1. Received: "
                             + "pu=" + pu + ", pm=" + pm + ", pd=" + pd
             );
+
         }
 
         double probabilitySum = pu + pm + pd;
         if (FastMath.abs(probabilitySum - 1.0) > 1e-12) {
-            throw new MathException(
+            throw new InvalidModelDomainException(
                     "Trinomial probabilities must sum to 1. Received: " + probabilitySum
             );
         }
@@ -374,5 +376,10 @@ public final class TrinomialTree implements BumpableOptionModel {
     @Override
     public DayCountConvention dayCountConvention() {
         return dayCountConvention;
+    }
+
+    @Override
+    public double priceAtVolatility(double volatility) {
+        return withVolatility(volatility).price();
     }
 }

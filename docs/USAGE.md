@@ -591,8 +591,7 @@ distribution, `LICENSING.md` for the component-level explanation, and
 ## Historical Volatility
 
 ```java
-import com.thegreeklab.math.VolatilityCalculator;
-import com.thegreeklab.finance.time.DayCountConvention;
+
 import org.eclipse.collections.api.list.primitive.DoubleList;
 import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 
@@ -600,7 +599,7 @@ DoubleList prices = new DoubleArrayList(new double[]{
         198.40, 199.25, 201.10, 200.35, 202.80, 204.15
 });
 
-double volatility = VolatilityCalculator.historicalVolatility(prices, 252);
+double volatility = com.thegreeklab.math.volatility.VolatilityCalculator.historicalVolatility(prices, 252);
 ```
 
 For the publications behind the pricing models and adjustments, and for the
@@ -609,13 +608,13 @@ provenance of numerical test data, see [Sources and references](REFERENCES.md).
 ## Parkinson Volatility
 
 ```java
-import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 
 import java.util.List;
 
 List<VolatilityCalculator.PriceBar> bars = List.of(
         new VolatilityCalculator.PriceBar(200.20, 197.80),
-        new VolatilityCalculator.PriceBar(201.00, 198.90),
+        new com.thegreeklab.math.volatility.VolatilityCalculator.PriceBar(201.00, 198.90),
         new VolatilityCalculator.PriceBar(202.40, 199.70)
 );
 
@@ -629,11 +628,10 @@ import com.thegreeklab.finance.contract.OptionContract;
 import com.thegreeklab.finance.enums.Option;
 import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
-import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.OptionalDouble;
 
 ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 ZonedDateTime expiry = now.plusMonths(6);
@@ -662,4 +660,38 @@ var impliedVolatility =
         );
 ```
 
-The implied volatility solver supports European options.
+The European overload performs exercise-style and no-arbitrage validation.
+Any additional pricing model can use the common solver by implementing
+`VolatilityPricer`:
+
+```java
+import com.thegreeklab.math.volatility.ImpliedVolatilityResult;
+import com.thegreeklab.math.volatility.VolatilityPricer;
+
+VolatilityPricer calibrationModel = volatility ->
+        customModel.priceAtVolatility(volatility);
+
+ImpliedVolatilityResult result =
+        VolatilityCalculator.solveImpliedVolatility(
+                calibrationModel,
+                marketPrice,
+                0.25 // initial volatility / bracketing anchor
+        );
+
+boolean converged = result.converged();
+double customImpliedVolatility = result.volatility();
+double residualPriceError = result.priceError();
+int iterations = result.iterations();
+```
+
+`ImpliedVolatilityResult` distinguishes convergence, expiry, prices outside
+model-free bounds, invalid starting volatility, an unbracketed root, an invalid
+model domain and exhaustion of the iteration budget. The older
+`impliedVolatility(...)` overloads remain available and expose a converged
+result as `OptionalDouble`.
+
+The bundled American binomial, trinomial, Bjerksund-Stensland and
+Roll-Geske-Whaley models already implement `VolatilityPricer`, so they can be
+passed directly to this overload. The same applies to all discrete-dividend
+European adjustments: `SimpleVolatilityAdjustment`, `BosVandermark`,
+`HaugHaugAdjustment` and `BosGairatShepeleva`.
