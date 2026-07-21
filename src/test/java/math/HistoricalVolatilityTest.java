@@ -3,7 +3,7 @@ package math;
 import com.thegreeklab.finance.exception.LackingDataException;
 import com.thegreeklab.finance.exception.NonPositivePriceException;
 import com.thegreeklab.finance.exception.VolatilityException;
-import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 import org.eclipse.collections.api.list.primitive.DoubleList;
 import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 import org.junit.jupiter.api.Test;

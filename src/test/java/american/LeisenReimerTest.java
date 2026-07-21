@@ -79,10 +79,17 @@ class LeisenReimerTest {
         OptionContract europeanCall = contract(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
-        double leisenReimerPrice = new LeisenReimer(americanCall, frame, 0.2, 101, ACT_365F).price();
+        LeisenReimer model = new LeisenReimer(
+                americanCall, frame, 0.2, 101, ACT_365F
+        );
+        double leisenReimerPrice = model.price();
         double blackScholesPrice = new BlackScholesMerton(europeanCall, frame, 0.2, ACT_365F).price();
 
         assertEquals(blackScholesPrice, leisenReimerPrice, 0.02);
+        assertEquals(
+                model.withVolatility(0.25).price(),
+                model.priceAtVolatility(0.25)
+        );
     }
 
     private static OptionContract contract(ZonedDateTime now, Option option) {

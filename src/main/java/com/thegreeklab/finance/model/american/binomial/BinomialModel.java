@@ -8,6 +8,7 @@ import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
 import com.thegreeklab.finance.model.greeks.Greeks;
 import com.thegreeklab.finance.time.DayCountConvention;
+import com.thegreeklab.math.volatility.VolatilityPricer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.jafama.FastMath;
 
@@ -24,7 +25,7 @@ import static com.thegreeklab.finance.validation.PricingValidation.requireValidS
  * rolls the tree backwards with early exercise at each node, so only
  * {@link Option#AMERICAN} contracts are accepted.
  */
-public abstract sealed class BinomialModel implements Greeks, BumpableOptionModel permits LeisenReimer, CoxRossRubenstein {
+public abstract sealed class BinomialModel implements Greeks, BumpableOptionModel, VolatilityPricer permits LeisenReimer, CoxRossRubenstein {
 
     /** Option payoff direction. */
     protected final OptionType type;
@@ -445,4 +446,9 @@ public abstract sealed class BinomialModel implements Greeks, BumpableOptionMode
      * @return newly constructed tree with the requested strike
      */
     protected abstract BinomialModel withStrike(double newStrike);
+
+    @Override
+    public double priceAtVolatility(double volatility) {
+        return withVolatility(volatility).price();
+    }
 }

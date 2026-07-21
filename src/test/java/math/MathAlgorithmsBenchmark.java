@@ -6,7 +6,7 @@ import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.math.ERF;
 import com.thegreeklab.math.PeizerPrattInversion;
-import com.thegreeklab.math.VolatilityCalculator;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 import org.eclipse.collections.api.list.primitive.DoubleList;
 import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 import org.openjdk.jmh.annotations.*;

@@ -337,7 +337,12 @@ class BjerksundStenslandTest {
                 () -> assertEquals(model.gamma(), values.gamma(), TOLERANCE),
                 () -> assertEquals(model.vega(), values.vega(), TOLERANCE),
                 () -> assertEquals(model.theta(), values.theta(), TOLERANCE),
-                () -> assertEquals(model.rho(), values.rho(), TOLERANCE)
+                () -> assertEquals(model.rho(), values.rho(), TOLERANCE),
+                () -> assertEquals(
+                        model.withVolatility(0.30).price(),
+                        model.priceAtVolatility(0.30),
+                        TOLERANCE
+                )
         );
     }
 

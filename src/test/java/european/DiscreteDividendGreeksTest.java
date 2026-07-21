@@ -14,6 +14,8 @@ import com.thegreeklab.finance.model.european.discrete.adjustments.HaugHaugAdjus
 import com.thegreeklab.finance.model.european.discrete.adjustments.SimpleVolatilityAdjustment;
 import com.thegreeklab.finance.model.greeks.StandardGreekValues;
 import com.thegreeklab.finance.time.EpochNanos;
+import com.thegreeklab.math.volatility.ImpliedVolatilityResult;
+import com.thegreeklab.math.volatility.VolatilityCalculator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -87,6 +89,33 @@ class DiscreteDividendGreeksTest {
                 () -> assertTrue(Double.isFinite(greeks.theta())),
                 () -> assertTrue(Double.isFinite(greeks.rho()))
         );
+    }
+
+    @ParameterizedTest(name = "{0} recovers implied volatility")
+    @EnumSource(ModelKind.class)
+    void recoversImpliedVolatility(ModelKind kind) {
+        DividendSchedule schedule = new DividendSchedule(List.of(
+                dividend(VALUATION.plusDays(90), 1.25),
+                dividend(VALUATION.plusDays(240), 1.75)
+        ));
+        double expectedVolatility = 0.27;
+        double initialVolatility = 0.15;
+        DiscreteDividendOptionModel marketModel = model(
+                kind, FRAME, schedule, expectedVolatility
+        );
+        DiscreteDividendOptionModel calibrationModel = model(
+                kind, FRAME, schedule, initialVolatility
+        );
+
+        ImpliedVolatilityResult result = VolatilityCalculator.solveImpliedVolatility(
+                calibrationModel,
+                marketModel.price(),
+                initialVolatility
+        );
+
+        assertTrue(result.converged());
+        assertEquals(expectedVolatility, result.volatility(), 1e-7);
+        assertEquals(0.0, result.priceError(), 1e-10);
     }
 
     @Test
