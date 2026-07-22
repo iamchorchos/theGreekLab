@@ -346,9 +346,4 @@ public final class BjerksundStensland extends AbstractBumpAndRevalueModel {
         return dayCountConvention;
     }
 
-    @Override
-    public double priceAtVolatility(double volatility) {
-        return withVolatility(volatility).price();
-    }
-
 }
