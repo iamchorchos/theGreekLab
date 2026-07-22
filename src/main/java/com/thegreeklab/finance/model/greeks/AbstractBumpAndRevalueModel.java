@@ -118,7 +118,7 @@ public abstract class AbstractBumpAndRevalueModel
     }
 
     @Override
-    public final double delta() {
+    public double delta() {
         double bump = spotBump(DELTA_SPOT_BUMP);
         double up = withSpot(spotPrice() + bump).price();
         double down = withSpot(spotPrice() - bump).price();
@@ -126,7 +126,7 @@ public abstract class AbstractBumpAndRevalueModel
     }
 
     @Override
-    public final double gamma() {
+    public double gamma() {
         return gammaFromPrice(price());
     }
 
@@ -138,7 +138,7 @@ public abstract class AbstractBumpAndRevalueModel
     }
 
     @Override
-    public final double vega() {
+    public double vega() {
         double bump = Math.max(
                 volatility() * VOLATILITY_BUMP,
                 MINIMUM_ABSOLUTE_BUMP
@@ -154,19 +154,19 @@ public abstract class AbstractBumpAndRevalueModel
     }
 
     @Override
-    public final double theta() {
+    public double theta() {
         return thetaFromPrice(price());
     }
 
     @Override
-    public final double rho() {
+    public double rho() {
         double up = withRiskFreeRate(riskFreeRate() + RATE_BUMP).price();
         double down = withRiskFreeRate(riskFreeRate() - RATE_BUMP).price();
         return (up - down) / (2.0 * RATE_BUMP);
     }
 
     @Override
-    public final StandardGreekValues greeks() {
+    public StandardGreekValues greeks() {
         double currentPrice = price();
         return new StandardGreekValues(
                 currentPrice,
@@ -179,7 +179,7 @@ public abstract class AbstractBumpAndRevalueModel
     }
 
     @Override
-    public final double priceAtVolatility(double newVolatility) {
+    public double priceAtVolatility(double newVolatility) {
         return withVolatility(newVolatility).price();
     }
 }

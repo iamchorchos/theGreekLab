@@ -100,7 +100,7 @@ Add the library to a Maven project with:
 <dependency>
     <groupId>io.github.iamchorchos</groupId>
     <artifactId>thegreeklab</artifactId>
-    <version>2.0.1</version>
+    <version>2.2.0</version>
 </dependency>
 ```
 
@@ -148,13 +148,13 @@ protected API with that explicit baseline using japicmp:
 Windows PowerShell:
 
 ```powershell
-.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.0.1"
+.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.1.0"
 ```
 
 Linux/macOS:
 
 ```bash
-./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.0.1
+./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.1.0
 ```
 
 The compatibility profile fails on binary- or source-incompatible changes and
