@@ -13,6 +13,7 @@ import com.thegreeklab.finance.time.EpochNanos;
 import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.BivariateNormal;
 import com.thegreeklab.math.ERF;
+import com.thegreeklab.math.volatility.VolatilityPricer;
 import net.jafama.FastMath;
 
 import java.util.Objects;
@@ -343,6 +344,11 @@ public final class BjerksundStensland extends AbstractBumpAndRevalueModel {
     @Override
     public DayCountConvention dayCountConvention() {
         return dayCountConvention;
+    }
+
+    @Override
+    public double priceAtVolatility(double volatility) {
+        return withVolatility(volatility).price();
     }
 
 }
