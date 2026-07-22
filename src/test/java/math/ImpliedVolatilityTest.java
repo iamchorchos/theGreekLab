@@ -148,10 +148,7 @@ class ImpliedVolatilityTest {
     @Test
     void reportsEuropeanPriceOutsideBounds() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = new OptionContract(
-                "TEST", OptionType.CALL, Option.EUROPEAN, 100.0,
-                now.plusYears(1), 100
-        );
+        OptionContract contract = atTheMoneyCall(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         ImpliedVolatilityResult result = VolatilityCalculator.solveImpliedVolatility(
@@ -229,14 +226,7 @@ class ImpliedVolatilityTest {
     @Test
     void rejectsAmerican() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = new OptionContract(
-                "TEST",
-                OptionType.CALL,
-                Option.AMERICAN,
-                100.0,
-                now.plusYears(1),
-                100
-        );
+        OptionContract contract = atTheMoneyCall(now, Option.AMERICAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertThrows(
@@ -275,14 +265,7 @@ class ImpliedVolatilityTest {
     @Test
     void rejectsNonFinitePrice() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        OptionContract contract = new OptionContract(
-                "TEST",
-                OptionType.CALL,
-                Option.EUROPEAN,
-                100.0,
-                now.plusYears(1),
-                100
-        );
+        OptionContract contract = atTheMoneyCall(now, Option.EUROPEAN);
         EquityFrame frame = new EquityFrame(now, 100.0, 0.05, 0.0);
 
         assertThrows(
@@ -290,6 +273,20 @@ class ImpliedVolatilityTest {
                 () -> VolatilityCalculator.impliedVolatility(
                         contract, frame, Double.NaN, ACT_365F
                 )
+        );
+    }
+
+    private static OptionContract atTheMoneyCall(
+            ZonedDateTime valuation,
+            Option exerciseStyle
+    ) {
+        return new OptionContract(
+                "TEST",
+                OptionType.CALL,
+                exerciseStyle,
+                100.0,
+                valuation.plusYears(1),
+                100
         );
     }
 }

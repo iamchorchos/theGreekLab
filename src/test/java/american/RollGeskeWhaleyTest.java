@@ -23,16 +23,18 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static testsupport.GreekAssertions.assertGreekSnapshotMatches;
 
 class RollGeskeWhaleyTest {
 
     private static final double SECONDS_PER_YEAR = 365.0 * 86_400.0;
+    private static final ZonedDateTime STANDARD_VALUATION = ZonedDateTime.of(
+            2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
+    );
 
     @Test
     void matchesHaugExample() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         long valuationTimestamp = EpochNanos.from(valuation);
         long dividendTimestamp = timestampAfter(valuationTimestamp, 0.25);
         ZonedDateTime expiration = EpochNanos.toUtc(
@@ -93,15 +95,8 @@ class RollGeskeWhaleyTest {
 
     @Test
     void rejectsNullInputs() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
-        ZonedDateTime expiration = valuation.plusYears(1);
-        OptionContract contract = contract(
-                Option.AMERICAN,
-                100.0,
-                expiration
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
+        OptionContract contract = standardAmericanContract(valuation);
         EquityFrame frame = new EquityFrame(valuation, 100.0, 0.05, 0.0);
         CashDividend dividend = new CashDividend(
                 EpochNanos.from(valuation.plusMonths(6)),
@@ -122,15 +117,9 @@ class RollGeskeWhaleyTest {
 
     @Test
     void rejectsInvalidDates() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         ZonedDateTime expiration = valuation.plusYears(1);
-        OptionContract contract = contract(
-                Option.AMERICAN,
-                100.0,
-                expiration
-        );
+        OptionContract contract = standardAmericanContract(valuation);
         EquityFrame frame = new EquityFrame(valuation, 100.0, 0.05, 0.0);
 
         assertAll(
@@ -163,9 +152,7 @@ class RollGeskeWhaleyTest {
 
     @Test
     void rejectsNonPositiveAdjustedSpot() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         ZonedDateTime expiration = valuation.plusYears(1);
 
         assertThrows(NonPositivePriceException.class, () ->
@@ -180,9 +167,7 @@ class RollGeskeWhaleyTest {
 
     @Test
     void respectsIntrinsicValueWithNegativeRate() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         ZonedDateTime expiration = valuation.plusYears(1);
         RollGeskeWhaley model = new RollGeskeWhaley(
                 contract(Option.AMERICAN, 100.0, expiration),
@@ -197,15 +182,9 @@ class RollGeskeWhaleyTest {
 
     @Test
     void bumpsCreateEquivalentCopies() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         ZonedDateTime expiration = valuation.plusYears(1);
-        OptionContract contract = contract(
-                Option.AMERICAN,
-                100.0,
-                expiration
-        );
+        OptionContract contract = standardAmericanContract(valuation);
         EquityFrame frame = new EquityFrame(valuation, 105.0, 0.04, 0.0);
         CashDividend dividend = new CashDividend(
                 EpochNanos.from(valuation.plusMonths(6)),
@@ -278,9 +257,7 @@ class RollGeskeWhaleyTest {
 
     @Test
     void greeksMatchEuropeanLimit() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         ZonedDateTime dividendDate = valuation.plusMonths(6);
         ZonedDateTime expiration = valuation.plusYears(1);
         double spot = 100.0;
@@ -330,9 +307,7 @@ class RollGeskeWhaleyTest {
 
     @Test
     void americanGreeksAreFinite() {
-        ZonedDateTime valuation = ZonedDateTime.of(
-                2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC
-        );
+        ZonedDateTime valuation = STANDARD_VALUATION;
         long valuationTimestamp = EpochNanos.from(valuation);
         RollGeskeWhaley model = new RollGeskeWhaley(
                 contract(
@@ -353,14 +328,9 @@ class RollGeskeWhaleyTest {
                 () -> assertTrue(Double.isFinite(values.gamma())),
                 () -> assertTrue(Double.isFinite(values.vega())),
                 () -> assertTrue(Double.isFinite(values.theta())),
-                () -> assertTrue(Double.isFinite(values.rho())),
-                () -> assertEquals(model.price(), values.price(), 1e-12),
-                () -> assertEquals(model.delta(), values.delta(), 1e-12),
-                () -> assertEquals(model.gamma(), values.gamma(), 1e-12),
-                () -> assertEquals(model.vega(), values.vega(), 1e-12),
-                () -> assertEquals(model.theta(), values.theta(), 1e-12),
-                () -> assertEquals(model.rho(), values.rho(), 1e-12)
+                () -> assertTrue(Double.isFinite(values.rho()))
         );
+        assertGreekSnapshotMatches(model, values, 1e-12);
     }
 
     @Test
@@ -392,6 +362,12 @@ class RollGeskeWhaleyTest {
         return new OptionContract(
                 "TEST", OptionType.CALL, style, strike, expiration, 100
         );
+    }
+
+    private static OptionContract standardAmericanContract(
+            ZonedDateTime valuation
+    ) {
+        return contract(Option.AMERICAN, 100.0, valuation.plusYears(1));
     }
 
     private static long timestampAfter(long startTimestamp, double years) {

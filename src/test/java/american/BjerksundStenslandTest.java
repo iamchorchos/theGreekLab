@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static testsupport.GreekAssertions.assertGreekSnapshotMatches;
 
 class BjerksundStenslandTest {
 
@@ -331,18 +332,11 @@ class BjerksundStenslandTest {
         );
         var values = model.greeks();
 
-        assertAll(
-                () -> assertEquals(model.price(), values.price(), TOLERANCE),
-                () -> assertEquals(model.delta(), values.delta(), TOLERANCE),
-                () -> assertEquals(model.gamma(), values.gamma(), TOLERANCE),
-                () -> assertEquals(model.vega(), values.vega(), TOLERANCE),
-                () -> assertEquals(model.theta(), values.theta(), TOLERANCE),
-                () -> assertEquals(model.rho(), values.rho(), TOLERANCE),
-                () -> assertEquals(
-                        model.withVolatility(0.30).price(),
-                        model.priceAtVolatility(0.30),
-                        TOLERANCE
-                )
+        assertGreekSnapshotMatches(model, values, TOLERANCE);
+        assertEquals(
+                model.withVolatility(0.30).price(),
+                model.priceAtVolatility(0.30),
+                TOLERANCE
         );
     }
 

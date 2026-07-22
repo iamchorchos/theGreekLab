@@ -21,6 +21,7 @@ import static com.thegreeklab.finance.time.DayCountConvention.ACT_360;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static testsupport.GreekAssertions.assertGreekSnapshotMatches;
 
 class BlackScholesCallPriceTest {
 
@@ -94,14 +95,7 @@ class BlackScholesCallPriceTest {
         );
         var values = model.greeks();
 
-        assertAll(
-                () -> assertEquals(model.price(), values.price(), TOLERANCE),
-                () -> assertEquals(model.delta(), values.delta(), TOLERANCE),
-                () -> assertEquals(model.gamma(), values.gamma(), TOLERANCE),
-                () -> assertEquals(model.vega(), values.vega(), TOLERANCE),
-                () -> assertEquals(model.theta(), values.theta(), TOLERANCE),
-                () -> assertEquals(model.rho(), values.rho(), TOLERANCE)
-        );
+        assertGreekSnapshotMatches(model, values, TOLERANCE);
     }
 
     @Test
