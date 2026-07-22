@@ -108,7 +108,7 @@ class DiscreteDividendGreeksTest {
         );
 
         ImpliedVolatilityResult result = VolatilityCalculator.solveImpliedVolatility(
-                calibrationModel,
+                volatility -> calibrationModel.withVolatility(volatility).price(),
                 marketModel.price(),
                 initialVolatility
         );

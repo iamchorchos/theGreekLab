@@ -28,8 +28,8 @@ Prepare and verify the release on `main`, then create and push an annotated
 semantic-version tag:
 
 ```bash
-git tag -a v2.0.1 -m "Release v2.0.1"
-git push origin v2.0.1
+git tag -a v2.2.0 -m "Release v2.2.0"
+git push origin v2.2.0
 ```
 
 The release workflow validates the tag, builds the Linux native library, runs
@@ -51,7 +51,7 @@ The Central profile can be loaded and the release artifacts can be assembled
 without uploading or requiring signing credentials:
 
 ```bash
-./mvnw -Pcentral-release -Drevision=2.0.1 -Dgpg.skip=true \
+./mvnw -Pcentral-release -Drevision=2.2.0 -Dgpg.skip=true \
   -Dcentral.skipPublishing=true clean verify
 ```
 

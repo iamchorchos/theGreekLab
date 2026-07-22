@@ -1,7 +1,6 @@
 package com.thegreeklab.finance.model.european.discrete.adjustments;
 
 import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
-import com.thegreeklab.math.volatility.VolatilityPricer;
 
 /**
  * Common contract for European option models that approximate deterministic
@@ -22,30 +21,7 @@ import com.thegreeklab.math.volatility.VolatilityPricer;
  * original market inputs, so they include the effect of every pricing-input
  * adjustment made by the concrete model.</p>
  */
-public interface DiscreteDividendOptionModel
-        extends BumpableOptionModel, VolatilityPricer {
-
-    /**
-     * Creates an equivalent discrete-dividend model with a replacement input
-     * volatility.
-     *
-     * @param newVolatility replacement annualized volatility as a decimal
-     * @return immutable model copy using {@code newVolatility}
-     */
-    @Override
-    DiscreteDividendOptionModel withVolatility(double newVolatility);
-
-    /**
-     * Prices the same contract, market snapshot and dividend schedule at a
-     * trial volatility for implied-volatility calibration.
-     *
-     * @param volatility trial annualized volatility as a decimal
-     * @return model price at the supplied volatility
-     */
-    @Override
-    default double priceAtVolatility(double volatility) {
-        return withVolatility(volatility).price();
-    }
+public interface DiscreteDividendOptionModel extends BumpableOptionModel {
 
     /**
      * Returns spot adjusted for applicable cash dividends by the concrete model.
