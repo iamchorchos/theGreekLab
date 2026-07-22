@@ -7,8 +7,7 @@ import com.thegreeklab.finance.exception.InvalidVolatilityException;
 import com.thegreeklab.finance.exception.UnsupportedExerciseStyleException;
 import com.thegreeklab.finance.frame.MarketData;
 import com.thegreeklab.finance.model.european.BlackScholes;
-import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
-import com.thegreeklab.finance.model.greeks.StandardGreekValues;
+import com.thegreeklab.finance.model.greeks.AbstractBumpAndRevalueModel;
 import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.time.EpochNanos;
 import com.thegreeklab.finance.validation.PricingValidation;
@@ -58,7 +57,7 @@ import java.util.Objects;
  *
  * @see BlackScholes
  */
-public final class BjerksundStensland implements BumpableOptionModel, VolatilityPricer {
+public final class BjerksundStensland extends AbstractBumpAndRevalueModel {
 
     private final double strikePrice;
     private final double spotPrice;
@@ -71,12 +70,6 @@ public final class BjerksundStensland implements BumpableOptionModel, Volatility
     private final OptionContract contract;
     private final MarketData frame;
     private final DayCountConvention dayCountConvention;
-
-    private static final double DELTA_SPOT_BUMP = 1e-4;
-    private static final double GAMMA_SPOT_BUMP = 1e-3;
-    private static final double VOLATILITY_BUMP = 1e-4;
-    private static final double RATE_BUMP = 1e-4;
-    private static final long ONE_DAY_NANOS = 86_400_000_000_000L;
 
     /**
      * Creates an American-option pricing engine for a contract and a market-data snapshot.
@@ -315,135 +308,42 @@ public final class BjerksundStensland implements BumpableOptionModel, Volatility
         );
     }
 
-    /**
-     * Estimates delta with a central spot bump.
-     *
-     * @return numerical first derivative of price with respect to spot
-     */
     @Override
-    public double delta() {
-        double deltaBump = Math.max(spotPrice * DELTA_SPOT_BUMP, 1e-6);
-
-        double up = withSpot(spotPrice + deltaBump).price();
-        double down = withSpot(spotPrice - deltaBump).price();
-
-        return (up - down) / (2.0 * deltaBump);
+    protected double spotPrice() {
+        return spotPrice;
     }
 
-    /**
-     * Estimates gamma with a central spot bump larger than the delta bump to
-     * reduce amplification of numerical noise.
-     *
-     * @return numerical second derivative of price with respect to spot
-     */
     @Override
-    public double gamma() {
-        return gamma(price());
+    protected double volatility() {
+        return volatility;
     }
 
-    private double gamma(double center) {
-        double gammaBump = Math.max(spotPrice * GAMMA_SPOT_BUMP, 1e-6);
-
-        double up = withSpot(spotPrice + gammaBump).price();
-        double down = withSpot(spotPrice - gammaBump).price();
-
-        return (up - 2.0 * center + down) / (gammaBump * gammaBump);
-    }
-
-    /**
-     * Estimates vega over the valid volatility interval surrounding the
-     * current value. The lower endpoint is clamped to the supported minimum.
-     *
-     * @return numerical first derivative of price with respect to volatility,
-     * per unit of volatility
-     */
     @Override
-    public double vega() {
-        double vegaBump = Math.max(volatility * VOLATILITY_BUMP, 1e-6);
-        double volatilityDown = Math.max(
-                volatility - vegaBump,
-                PricingValidation.MIN_VOLATILITY
-        );
-
-        double up = withVolatility(volatility + vegaBump).price();
-        double down = withVolatility(volatilityDown).price();
-
-        return (up - down) / (volatility + vegaBump - volatilityDown);
+    protected double riskFreeRate() {
+        return riskFreeRate;
     }
 
-    /**
-     * Estimates annualized theta by advancing the valuation timestamp by at
-     * most one day. At expiry the method returns {@code 0.0}.
-     *
-     * @return numerical derivative of price with respect to the passage of
-     * calendar time, annualized
-     */
     @Override
-    public double theta() {
-        return theta(price());
+    protected long valuationTimestampNanos() {
+        return frame.timestampNanos();
     }
 
-    private double theta(double current) {
-        if (timeToExpiry <= 0.0) {
-            return 0.0;
-        }
-
-        long expirationNanos = EpochNanos.from(contract.expirationDate());
-        long remainingNanos = Math.subtractExact(expirationNanos, frame.timestampNanos());
-        long thetaBump = Math.min(ONE_DAY_NANOS, Math.max(1L, remainingNanos / 2L));
-        long bumpedTimestamp = Math.addExact(frame.timestampNanos(), thetaBump);
-        double bumpedTimeToExpiry = dayCountConvention.timeToExpiry(
-                bumpedTimestamp,
-                contract.expirationDate()
-        );
-        double elapsedYears = timeToExpiry - bumpedTimeToExpiry;
-
-        double bumped = withTimestamp(bumpedTimestamp).price();
-
-        return (bumped - current) / elapsedYears;
-    }
-
-    /**
-     * Estimates rho with a central one-basis-point risk-free-rate bump.
-     *
-     * @return numerical first derivative of price with respect to the
-     * risk-free rate, per unit of rate
-     */
     @Override
-    public double rho() {
-        double up = withRiskFreeRate(riskFreeRate + RATE_BUMP).price();
-        double down = withRiskFreeRate(riskFreeRate - RATE_BUMP).price();
-
-        return (up - down) / (2.0 * RATE_BUMP);
+    protected long expirationTimestampNanos() {
+        return EpochNanos.from(contract.expirationDate());
     }
 
-    /**
-     * Calculates the complete standard-Greek snapshot while reusing the base
-     * option value for gamma and theta.
-     *
-     * @return price and all five numerical standard Greeks
-     */
     @Override
-    public StandardGreekValues greeks() {
-        double currentPrice = price();
-        return new StandardGreekValues(
-                currentPrice,
-                delta(),
-                gamma(currentPrice),
-                vega(),
-                theta(currentPrice),
-                rho()
+    protected double spotBump(double relativeBump) {
+        return Math.max(
+                spotPrice * relativeBump,
+                MINIMUM_ABSOLUTE_BUMP
         );
     }
 
     @Override
     public DayCountConvention dayCountConvention() {
         return dayCountConvention;
-    }
-
-    @Override
-    public double priceAtVolatility(double volatility) {
-        return withVolatility(volatility).price();
     }
 
 }

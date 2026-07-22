@@ -8,14 +8,11 @@ import com.thegreeklab.finance.exception.NonPositivePriceException;
 import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.european.BlackScholes;
 import com.thegreeklab.finance.model.european.discrete.CashDividend;
-import com.thegreeklab.finance.model.greeks.BumpableOptionModel;
-import com.thegreeklab.finance.model.greeks.StandardGreekValues;
+import com.thegreeklab.finance.model.greeks.AbstractBumpAndRevalueModel;
 import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.time.EpochNanos;
-import com.thegreeklab.finance.validation.PricingValidation;
 import com.thegreeklab.math.BivariateNormal;
 import com.thegreeklab.math.ERF;
-import com.thegreeklab.math.volatility.VolatilityPricer;
 import net.jafama.FastMath;
 
 import java.util.Objects;
@@ -50,16 +47,11 @@ import static com.thegreeklab.finance.validation.PricingValidation.requireValidV
  * @see <a href="https://doi.org/10.1016/0304-405X(79)90017-5">Geske (1979)</a>
  * @see <a href="https://doi.org/10.1016/0304-405X(81)90011-5">Whaley (1981)</a>
  */
-public final class RollGeskeWhaley implements BumpableOptionModel, VolatilityPricer {
+public final class RollGeskeWhaley extends AbstractBumpAndRevalueModel {
 
     private static final double CRITICAL_PRICE_TOLERANCE = 1e-10;
-    private static final double DELTA_SPOT_BUMP = 1e-4;
-    private static final double GAMMA_SPOT_BUMP = 1e-3;
-    private static final double VOLATILITY_BUMP = 1e-4;
-    private static final double RATE_BUMP = 1e-4;
     private static final int MAX_BRACKET_ITERATIONS = 100;
     private static final int MAX_BISECTION_ITERATIONS = 200;
-    private static final long ONE_DAY_NANOS = 86_400_000_000_000L;
 
     private final OptionContract contract;
     private final EquityFrame frame;
@@ -357,60 +349,39 @@ public final class RollGeskeWhaley implements BumpableOptionModel, VolatilityPri
         return dayCountConvention;
     }
 
-    /**
-     * Estimates delta by centrally bumping the unadjusted equity spot.
-     *
-     * @return first derivative of price with respect to spot
-     */
     @Override
-    public double delta() {
-        double bump = spotBump(DELTA_SPOT_BUMP);
-        double up = withSpot(spotPrice + bump).price();
-        double down = withSpot(spotPrice - bump).price();
-        return (up - down) / (2.0 * bump);
+    protected double spotPrice() {
+        return spotPrice;
     }
 
-    /**
-     * Estimates gamma by centrally bumping the unadjusted equity spot.
-     *
-     * @return second derivative of price with respect to spot
-     */
     @Override
-    public double gamma() {
-        return gamma(price());
+    protected double volatility() {
+        return volatility;
     }
 
-    private double gamma(double centerPrice) {
-        double bump = spotBump(GAMMA_SPOT_BUMP);
-        double up = withSpot(spotPrice + bump).price();
-        double down = withSpot(spotPrice - bump).price();
-        return (up - 2.0 * centerPrice + down) / (bump * bump);
+    @Override
+    protected double riskFreeRate() {
+        return riskFreeRate;
     }
 
-    private double spotBump(double relativeBump) {
-        double requestedBump = FastMath.max(spotPrice * relativeBump, 1e-6);
+    @Override
+    protected long valuationTimestampNanos() {
+        return frame.timestampNanos();
+    }
+
+    @Override
+    protected long expirationTimestampNanos() {
+        return EpochNanos.from(contract.expirationDate());
+    }
+
+    @Override
+    protected double spotBump(double relativeBump) {
+        double requestedBump = FastMath.max(
+                spotPrice * relativeBump,
+                MINIMUM_ABSOLUTE_BUMP
+        );
         double validBump = 0.5 * FastMath.min(spotPrice, adjustedSpot);
         return FastMath.min(requestedBump, validBump);
-    }
-
-    /**
-     * Estimates vega over the valid volatility interval around the current
-     * value.
-     *
-     * @return first derivative of price with respect to volatility, per unit
-     *         of volatility
-     */
-    @Override
-    public double vega() {
-        double bump = FastMath.max(volatility * VOLATILITY_BUMP, 1e-6);
-        double volatilityDown = FastMath.max(
-                volatility - bump,
-                PricingValidation.MIN_VOLATILITY
-        );
-        double volatilityUp = volatility + bump;
-        double up = withVolatility(volatilityUp).price();
-        double down = withVolatility(volatilityDown).price();
-        return (up - down) / (volatilityUp - volatilityDown);
     }
 
     /**
@@ -423,11 +394,7 @@ public final class RollGeskeWhaley implements BumpableOptionModel, VolatilityPri
      * @return first derivative of price with respect to the passage of time
      */
     @Override
-    public double theta() {
-        return theta(price());
-    }
-
-    private double theta(double currentPrice) {
+    protected double thetaFromPrice(double currentPrice) {
         long valuationTimestamp = frame.timestampNanos();
         long remainingToDividend = Math.subtractExact(
                 dividend.exTimestampNanos(),
@@ -463,40 +430,4 @@ public final class RollGeskeWhaley implements BumpableOptionModel, VolatilityPri
                 / elapsedYears;
     }
 
-    /**
-     * Estimates rho with a central one-basis-point rate bump.
-     *
-     * @return first derivative of price with respect to the continuously
-     *         compounded risk-free rate, per unit of rate
-     */
-    @Override
-    public double rho() {
-        double up = withRiskFreeRate(riskFreeRate + RATE_BUMP).price();
-        double down = withRiskFreeRate(riskFreeRate - RATE_BUMP).price();
-        return (up - down) / (2.0 * RATE_BUMP);
-    }
-
-    /**
-     * Calculates price and all five numerical Greeks while reusing the base
-     * price for gamma and theta.
-     *
-     * @return immutable price and standard-Greek snapshot
-     */
-    @Override
-    public StandardGreekValues greeks() {
-        double currentPrice = price();
-        return new StandardGreekValues(
-                currentPrice,
-                delta(),
-                gamma(currentPrice),
-                vega(),
-                theta(currentPrice),
-                rho()
-        );
-    }
-
-    @Override
-    public double priceAtVolatility(double volatility) {
-        return withVolatility(volatility).price();
-    }
 }

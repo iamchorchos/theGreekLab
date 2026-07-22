@@ -6,7 +6,7 @@ import com.thegreeklab.finance.frame.EquityFrame;
 import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import com.thegreeklab.finance.model.european.discrete.CashDividend;
 import com.thegreeklab.finance.model.european.discrete.DividendSchedule;
-import com.thegreeklab.finance.model.greeks.StandardGreekValues;
+import com.thegreeklab.finance.model.greeks.AbstractBumpAndRevalueModel;
 import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.time.EpochNanos;
 import com.thegreeklab.finance.validation.PricingValidation;
@@ -22,13 +22,9 @@ import static com.thegreeklab.finance.validation.PricingValidation.requireNoCont
  * Shared preparation and pricing workflow for discrete-dividend volatility
  * adjustment models.
  */
-abstract class AbstractDiscreteDividendModel implements DiscreteDividendOptionModel {
-
-    private static final double DELTA_SPOT_BUMP = 1e-4;
-    private static final double GAMMA_SPOT_BUMP = 1e-3;
-    private static final double VOLATILITY_BUMP = 1e-4;
-    private static final double RATE_BUMP = 1e-4;
-    private static final long ONE_DAY_NANOS = 86_400_000_000_000L;
+abstract class AbstractDiscreteDividendModel
+        extends AbstractBumpAndRevalueModel
+        implements DiscreteDividendOptionModel {
 
     private final OptionContract contract;
     private final EquityFrame frame;
@@ -244,123 +240,24 @@ abstract class AbstractDiscreteDividendModel implements DiscreteDividendOptionMo
         return newModel(frame.withTimestampNanos(newTimestampNanos), volatility);
     }
 
-    /**
-     * Estimates delta by centrally bumping the original, unadjusted spot.
-     *
-     * @return numerical first derivative of price with respect to spot
-     */
     @Override
-    public final double delta() {
-        double bump = spotBump(DELTA_SPOT_BUMP);
-        double up = withSpot(frame.spotPrice() + bump).price();
-        double down = withSpot(frame.spotPrice() - bump).price();
-        return (up - down) / (2.0 * bump);
+    protected final double spotPrice() {
+        return frame.spotPrice();
     }
 
-    /**
-     * Estimates gamma by centrally bumping the original, unadjusted spot.
-     *
-     * @return numerical second derivative of price with respect to spot
-     */
     @Override
-    public final double gamma() {
-        return gamma(price());
+    protected final double riskFreeRate() {
+        return frame.riskFreeRate();
     }
 
-    private double gamma(double centerPrice) {
-        double bump = spotBump(GAMMA_SPOT_BUMP);
-        double up = withSpot(frame.spotPrice() + bump).price();
-        double down = withSpot(frame.spotPrice() - bump).price();
-        return (up - 2.0 * centerPrice + down) / (bump * bump);
-    }
-
-    private double spotBump(double relativeBump) {
-        double requestedBump = Math.max(frame.spotPrice() * relativeBump, 1e-6);
-        return Math.min(requestedBump, frame.spotPrice() * 0.5);
-    }
-
-    /**
-     * Estimates vega by bumping the original volatility over its valid local
-     * interval.
-     *
-     * @return numerical first derivative of price per unit of volatility
-     */
     @Override
-    public final double vega() {
-        double bump = Math.max(volatility * VOLATILITY_BUMP, 1e-6);
-        double volatilityDown = Math.max(
-                volatility - bump,
-                PricingValidation.MIN_VOLATILITY
-        );
-        double upVolatility = volatility + bump;
-        double up = withVolatility(upVolatility).price();
-        double down = withVolatility(volatilityDown).price();
-        return (up - down) / (upVolatility - volatilityDown);
+    protected final long valuationTimestampNanos() {
+        return frame.timestampNanos();
     }
 
-    /**
-     * Estimates annualized theta by advancing the valuation timestamp by at
-     * most one calendar day. At expiry the method returns {@code 0.0}.
-     *
-     * @return numerical derivative of price with respect to the passage of time
-     */
     @Override
-    public final double theta() {
-        return theta(price());
-    }
-
-    private double theta(double currentPrice) {
-        long valuationTimestamp = frame.timestampNanos();
-        long expirationTimestamp = EpochNanos.from(contract.expirationDate());
-        if (valuationTimestamp >= expirationTimestamp) {
-            return 0.0;
-        }
-
-        long remainingNanos = Math.subtractExact(
-                expirationTimestamp,
-                valuationTimestamp
-        );
-        long bump = Math.min(ONE_DAY_NANOS, Math.max(1L, remainingNanos / 2L));
-        long bumpedTimestamp = Math.addExact(valuationTimestamp, bump);
-        double elapsedYears = dayCountConvention.yearFraction(
-                valuationTimestamp,
-                bumpedTimestamp
-        );
-        double bumpedPrice = withTimestamp(bumpedTimestamp).price();
-        return (bumpedPrice - currentPrice) / elapsedYears;
-    }
-
-    /**
-     * Estimates rho with a central one-basis-point bump of the original
-     * continuously compounded risk-free rate.
-     *
-     * @return numerical first derivative of price per unit of rate
-     */
-    @Override
-    public final double rho() {
-        double rate = frame.riskFreeRate();
-        double up = withRiskFreeRate(rate + RATE_BUMP).price();
-        double down = withRiskFreeRate(rate - RATE_BUMP).price();
-        return (up - down) / (2.0 * RATE_BUMP);
-    }
-
-    /**
-     * Calculates price and all standard numerical Greeks while reusing the
-     * base price for gamma and theta.
-     *
-     * @return immutable price and Greek snapshot
-     */
-    @Override
-    public final StandardGreekValues greeks() {
-        double currentPrice = price();
-        return new StandardGreekValues(
-                currentPrice,
-                delta(),
-                gamma(currentPrice),
-                vega(),
-                theta(currentPrice),
-                rho()
-        );
+    protected final long expirationTimestampNanos() {
+        return EpochNanos.from(contract.expirationDate());
     }
 
     @Override
