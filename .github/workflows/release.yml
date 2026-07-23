@@ -24,7 +24,7 @@ jobs:
             resource-directory: linux-x86_64
             library-name: libpbivnorm.so
             platform: linux
-          - runner: macos-13
+          - runner: macos-15-intel
             resource-directory: macos-x86_64
             library-name: libpbivnorm.dylib
             platform: macos
