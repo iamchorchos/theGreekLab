@@ -16,6 +16,8 @@ import com.thegreeklab.finance.model.european.BlackScholesMerton;
 import com.thegreeklab.finance.model.european.ForwardBlack76;
 import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.time.EpochNanos;
+import com.thegreeklab.finance.volatility.FlatVolatilitySurface;
+import com.thegreeklab.finance.volatility.VolatilitySurface;
 import com.thegreeklab.math.ERF;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +56,64 @@ class ForwardBlack76Test {
     }
 
     @Test
+    void flatVolatilitySurfaceMatchesTheScalarVolatilityConstructor() {
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
+        OptionContract contract = contract(OptionType.CALL);
+
+        double scalarPrice = new ForwardBlack76(
+                contract,
+                forwardCurve,
+                0.20,
+                DAY_COUNT
+        ).price();
+        double surfacePrice = new ForwardBlack76(
+                contract,
+                forwardCurve,
+                new FlatVolatilitySurface(VALUATION_NANOS, 0.20),
+                DAY_COUNT
+        ).price();
+
+        assertEquals(scalarPrice, surfacePrice, 0.0);
+    }
+
+    @Test
+    void rejectsAVolatilitySurfaceWithADifferentValuationTimestamp() {
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ForwardBlack76(
+                        contract(OptionType.CALL),
+                        forwardCurve,
+                        new FlatVolatilitySurface(VALUATION_NANOS + 1, 0.20),
+                        DAY_COUNT
+                )
+        );
+    }
+
+    @Test
+    void queriesVolatilitySurfaceUsingExpiryAndLogStrikeToForward() {
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
+        RecordingVolatilitySurface surface = new RecordingVolatilitySurface(
+                VALUATION_NANOS,
+                0.20
+        );
+        OptionContract contract = contract(OptionType.CALL);
+
+        new ForwardBlack76(contract, forwardCurve, surface, DAY_COUNT).price();
+
+        long expiryNanos = EpochNanos.from(EXPIRY);
+        assertAll(
+                () -> assertEquals(expiryNanos, surface.requestedExpiryNanos),
+                () -> assertEquals(
+                        Math.log(contract.strikePrice() / forwardCurve.forwardPrice(expiryNanos)),
+                        surface.requestedLogStrikeToForward,
+                        1e-15
+                )
+        );
+    }
+
+    @Test
     void returnsIntrinsicValueAtExpiry() {
         assertAll(
                 () -> assertEquals(
@@ -66,6 +126,45 @@ class ForwardBlack76Test {
                         ForwardBlack76.price(OptionType.PUT, 95.0, 100.0, 1.0, 0.20, 0.0),
                         0.0
                 )
+        );
+    }
+
+    @Test
+    void doesNotQueryVolatilitySurfaceAtExpiry() {
+        OptionContract expiredContract = new OptionContract(
+                "TEST",
+                OptionType.CALL,
+                Option.EUROPEAN,
+                100.0,
+                VALUATION,
+                100
+        );
+        InterpolatedForwardCurve forwardCurve = new InterpolatedForwardCurve(
+                VALUATION_NANOS,
+                List.of(new ForwardPriceNode(VALUATION_NANOS, 105.0))
+        );
+        VolatilitySurface surfaceRejectingValuationQueries = new VolatilitySurface() {
+            @Override
+            public long valuationTimestampNanos() {
+                return VALUATION_NANOS;
+            }
+
+            @Override
+            public double impliedVolatility(long expiryTimestampNanos, double logStrikeToForward) {
+                throw new AssertionError("An expired option must not query volatility.");
+            }
+        };
+
+        assertEquals(
+                5.0,
+                new ForwardBlack76(
+                        expiredContract,
+                        forwardCurve,
+                        new FundingCurve(flatCurve(VALUATION_NANOS, 0.05)),
+                        surfaceRejectingValuationQueries,
+                        DAY_COUNT
+                ).price(),
+                0.0
         );
     }
 
@@ -291,21 +390,21 @@ class ForwardBlack76Test {
     }
 
     private static double forwardBlackPrice(OptionType type) {
-        FlatDiscountCurve rawFundingCurve = flatCurve(VALUATION_NANOS, 0.05);
-        FundingCurve fundingCurve = new FundingCurve(rawFundingCurve);
-        EquityForwardCurve forwardCurve = new EquityForwardCurve(
-                VALUATION_NANOS,
-                100.0,
-                fundingCurve,
-                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
-        );
-
         return new ForwardBlack76(
                 contract(type),
-                forwardCurve,
+                standardEquityForwardCurve(),
                 0.20,
                 DAY_COUNT
         ).price();
+    }
+
+    private static EquityForwardCurve standardEquityForwardCurve() {
+        return new EquityForwardCurve(
+                VALUATION_NANOS,
+                100.0,
+                new FundingCurve(flatCurve(VALUATION_NANOS, 0.05)),
+                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
+        );
     }
 
     private static double blackScholesMertonPrice(OptionType type) {
@@ -330,5 +429,29 @@ class ForwardBlack76Test {
 
     private static FlatDiscountCurve flatCurve(long valuationNanos, double rate) {
         return new FlatDiscountCurve(valuationNanos, rate, DAY_COUNT);
+    }
+
+    private static final class RecordingVolatilitySurface implements VolatilitySurface {
+        private final long valuationTimestampNanos;
+        private final double volatility;
+        private long requestedExpiryNanos = Long.MIN_VALUE;
+        private double requestedLogStrikeToForward = Double.NaN;
+
+        private RecordingVolatilitySurface(long valuationTimestampNanos, double volatility) {
+            this.valuationTimestampNanos = valuationTimestampNanos;
+            this.volatility = volatility;
+        }
+
+        @Override
+        public long valuationTimestampNanos() {
+            return valuationTimestampNanos;
+        }
+
+        @Override
+        public double impliedVolatility(long expiryTimestampNanos, double logStrikeToForward) {
+            requestedExpiryNanos = expiryTimestampNanos;
+            requestedLogStrikeToForward = logStrikeToForward;
+            return volatility;
+        }
     }
 }

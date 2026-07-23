@@ -122,6 +122,21 @@ and do not extrapolate past the final node. They do not bootstrap curves from
 market instruments, apply calendar conventions, clean arbitrage, or provide
 curve Greeks. Those policies are deliberately outside the current API.
 
+### Volatility Surface Coordinates
+
+`VolatilitySurface` quotes implied volatility by expiry and forward-relative
+log moneyness:
+
+```math
+k(T)=\ln\left(\frac{K}{F(T)}\right)
+```
+
+`ForwardBlack76` obtains $sigma(T,k(T))$ after it has obtained $F(T)$ from
+the forward curve. `FlatVolatilitySurface` returns a single validated
+volatility for every finite $k$ at or after its valuation timestamp, preserving
+the scalar-volatility behavior of earlier API paths. Interpolated volatility
+surfaces, smile calibration and static-arbitrage checks are not implemented.
+
 ## Generalized European Option Price
 
 Call:

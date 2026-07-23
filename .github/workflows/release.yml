@@ -65,7 +65,7 @@ jobs:
           EXPECTED_VERSION: ${{ steps.version.outputs.version }}
         run: |
           ./mvnw -B -ntp -Drevision="$EXPECTED_VERSION" -DskipTests process-resources
-          python3 -c 'import os, xml.etree.ElementTree as ET; root = ET.parse(".flattened-pom.xml").getroot(); actual = root.find("{http://maven.apache.org/POM/4.0.0}version").text; expected = os.environ["EXPECTED_VERSION"]; assert actual == expected, f"Expected POM version {expected}, got {actual}"'
+          python3 -c 'import os, xml.etree.ElementTree as ET; root = ET.parse("thegreeklab-core/.flattened-pom.xml").getroot(); actual = root.find("{http://maven.apache.org/POM/4.0.0}version").text; expected = os.environ["EXPECTED_VERSION"]; assert actual == expected, f"Expected POM version {expected}, got {actual}"'
 
       - name: Verify, sign and publish to Maven Central
         env:
@@ -77,13 +77,19 @@ jobs:
           -Drevision=${{ steps.version.outputs.version }}
           clean deploy
 
-      - name: Generate checksums
-        working-directory: target
+      - name: Collect release artifacts and generate checksums
         run: |
+          mkdir release-artifacts
+          cp thegreeklab-core/target/thegreeklab-*.jar release-artifacts/
+          cp thegreeklab-visualization/target/thegreeklab-visualization-*.jar release-artifacts/
+          cd release-artifacts
           sha256sum \
             thegreeklab-${{ steps.version.outputs.version }}.jar \
             thegreeklab-${{ steps.version.outputs.version }}-sources.jar \
             thegreeklab-${{ steps.version.outputs.version }}-javadoc.jar \
+            thegreeklab-visualization-${{ steps.version.outputs.version }}.jar \
+            thegreeklab-visualization-${{ steps.version.outputs.version }}-sources.jar \
+            thegreeklab-visualization-${{ steps.version.outputs.version }}-javadoc.jar \
             > SHA256SUMS
 
       - name: Publish GitHub release
@@ -92,10 +98,13 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           assets=(
-            "target/thegreeklab-$VERSION.jar"
-            "target/thegreeklab-$VERSION-sources.jar"
-            "target/thegreeklab-$VERSION-javadoc.jar"
-            "target/SHA256SUMS"
+            "release-artifacts/thegreeklab-$VERSION.jar"
+            "release-artifacts/thegreeklab-$VERSION-sources.jar"
+            "release-artifacts/thegreeklab-$VERSION-javadoc.jar"
+            "release-artifacts/thegreeklab-visualization-$VERSION.jar"
+            "release-artifacts/thegreeklab-visualization-$VERSION-sources.jar"
+            "release-artifacts/thegreeklab-visualization-$VERSION-javadoc.jar"
+            "release-artifacts/SHA256SUMS"
           )
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

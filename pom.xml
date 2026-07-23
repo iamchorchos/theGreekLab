@@ -1,27 +1,40 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.github.iamchorchos</groupId>
-    <artifactId>thegreeklab</artifactId>
-    <version>${revision}</version>
-    <packaging>jar</packaging>
 
-    <name>TheGreekLab</name>
-    <description>
-        Java quantitative-finance library for European and American option pricing,
-        Greeks, volatility analytics, and native numerical routines through Panama FFM.
-    </description>
+    <groupId>io.github.iamchorchos</groupId>
+    <artifactId>thegreeklab-parent</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>TheGreekLab Parent</name>
+    <description>Reactor parent for TheGreekLab core and optional visualization modules.</description>
     <url>https://github.com/iamchorchos/theGreekLab</url>
-    <inceptionYear>2026</inceptionYear>
+
+    <modules>
+        <module>thegreeklab-core</module>
+        <module>thegreeklab-visualization</module>
+    </modules>
+
+    <properties>
+        <revision>2.2.0-SNAPSHOT</revision>
+        <java.version>22</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+        <javafx.version>22.0.2</javafx.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.10.2</junit.version>
+        <flatten.maven.version>1.7.3</flatten.maven.version>
+        <maven.gpg.version>3.2.8</maven.gpg.version>
+        <central.publishing.version>0.11.0</central.publishing.version>
+        <central.skipPublishing>false</central.skipPublishing>
+    </properties>
 
     <licenses>
         <license>
             <name>GPL-3.0-or-later</name>
-            <url>https://github.com/iamchorchos/theGreekLab/blob/main/LICENSE</url>
+            <url>https://github.com/iamchorchos/thegreeklab/blob/main/LICENSE</url>
             <distribution>repo</distribution>
-            <comments>
-                Applies to the combined JAR distribution. Original Java code remains
-                available under MIT, while pbivnorm is GPL-2.0-or-later.
-            </comments>
         </license>
     </licenses>
 
@@ -30,10 +43,6 @@
             <id>iamchorchos</id>
             <name>Olivier Chorchos</name>
             <url>https://github.com/iamchorchos</url>
-            <roles>
-                <role>developer</role>
-                <role>maintainer</role>
-            </roles>
         </developer>
     </developers>
 
@@ -44,103 +53,7 @@
         <tag>HEAD</tag>
     </scm>
 
-    <issueManagement>
-        <system>GitHub Issues</system>
-        <url>https://github.com/iamchorchos/theGreekLab/issues</url>
-    </issueManagement>
-
-    <ciManagement>
-        <system>GitHub Actions</system>
-        <url>https://github.com/iamchorchos/theGreekLab/actions</url>
-    </ciManagement>
-
-    <properties>
-        <revision>2.2.0-SNAPSHOT</revision>
-        <java.version>22</java.version>
-        <maven.compiler.release>${java.version}</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.10.2</junit.version>
-        <jmh.version>1.37</jmh.version>
-        <exec.maven.version>3.6.3</exec.maven.version>
-        <jacoco.version>0.8.14</jacoco.version>
-        <maven.javadoc.version>3.12.0</maven.javadoc.version>
-        <maven.source.version>3.3.1</maven.source.version>
-        <flatten.maven.version>1.7.3</flatten.maven.version>
-        <japicmp.version>0.26.1</japicmp.version>
-        <central.publishing.version>0.11.0</central.publishing.version>
-        <central.skipPublishing>false</central.skipPublishing>
-        <maven.gpg.version>3.2.8</maven.gpg.version>
-        <api.baseline.version>2.1.0</api.baseline.version>
-        <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
-        <jacocoArgLine/>
-    </properties>
-    <dependencies>
-        <dependency>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-annotations</artifactId>
-            <version>${spotbugs.annotations.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.collections</groupId>
-            <artifactId>eclipse-collections</artifactId>
-            <version>11.1.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.collections</groupId>
-            <artifactId>eclipse-collections-api</artifactId>
-            <version>11.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>net.jafama</groupId>
-            <artifactId>jafama</artifactId>
-            <version>2.3.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>LICENSES</directory>
-                <targetPath>META-INF/LICENSES</targetPath>
-            </resource>
-            <resource>
-                <directory>.</directory>
-                <targetPath>META-INF</targetPath>
-                <includes>
-                    <include>LICENSE</include>
-                    <include>LICENSING.md</include>
-                    <include>NOTICE</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -166,132 +79,9 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-                <configuration>
-                    <release>${java.version}</release>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.openjdk.jmh</groupId>
-                            <artifactId>jmh-generator-annprocess</artifactId>
-                            <version>${jmh.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-                <executions>
-                    <execution>
-                        <id>prepare-coverage-agent</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                        <configuration>
-                            <propertyName>jacocoArgLine</propertyName>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>coverage-report</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>coverage-check</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <rule>
-                                    <element>BUNDLE</element>
-                                    <limits>
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.85</minimum>
-                                        </limit>
-                                        <limit>
-                                            <counter>BRANCH</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.65</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-                <configuration>
-                    <argLine>@{jacocoArgLine} --enable-native-access=ALL-UNNAMED</argLine>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>${maven.source.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven.javadoc.version}</version>
-                <configuration>
-                    <doclint>all</doclint>
-                    <failOnWarnings>true</failOnWarnings>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>com.github.spotbugs</groupId>
-                <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.8.6.4</version>
-                <configuration>
-                    <effort>Max</effort>
-                    <threshold>Low</threshold>
-                    <failOnError>true</failOnError>
-                    <xmlOutput>true</xmlOutput>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>spotbugs-check</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>central-release</id>
@@ -324,93 +114,6 @@
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
                             <skipPublishing>${central.skipPublishing}</skipPublishing>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>api-compatibility</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.github.siom79.japicmp</groupId>
-                        <artifactId>japicmp-maven-plugin</artifactId>
-                        <version>${japicmp.version}</version>
-                        <configuration>
-                            <oldVersion>
-                                <dependency>
-                                    <groupId>${project.groupId}</groupId>
-                                    <artifactId>${project.artifactId}</artifactId>
-                                    <version>${api.baseline.version}</version>
-                                    <type>jar</type>
-                                </dependency>
-                            </oldVersion>
-                            <newVersion>
-                                <file>
-                                    <path>${project.build.directory}/${project.build.finalName}.jar</path>
-                                </file>
-                            </newVersion>
-                            <parameter>
-                                <accessModifier>protected</accessModifier>
-                                <onlyModified>true</onlyModified>
-                                <includeSynthetic>false</includeSynthetic>
-                                <ignoreMissingClasses>false</ignoreMissingClasses>
-                                <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
-                                <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>
-                            </parameter>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>check-api-compatibility</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>cmp</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>benchmarks</id>
-            <properties>
-                <benchmark.include>.*(AmericanOption|BivariateNormal)Benchmark.*</benchmark.include>
-                <benchmark.warmupIterations>5</benchmark.warmupIterations>
-                <benchmark.measurementIterations>5</benchmark.measurementIterations>
-                <benchmark.iterationTime>1s</benchmark.iterationTime>
-                <benchmark.forks>1</benchmark.forks>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <version>${exec.maven.version}</version>
-                        <configuration>
-                            <executable>java</executable>
-                            <classpathScope>test</classpathScope>
-                            <arguments>
-                                <argument>-cp</argument>
-                                <classpath/>
-                                <argument>org.openjdk.jmh.Main</argument>
-                                <argument>${benchmark.include}</argument>
-                                <argument>-wi</argument>
-                                <argument>${benchmark.warmupIterations}</argument>
-                                <argument>-i</argument>
-                                <argument>${benchmark.measurementIterations}</argument>
-                                <argument>-w</argument>
-                                <argument>${benchmark.iterationTime}</argument>
-                                <argument>-r</argument>
-                                <argument>${benchmark.iterationTime}</argument>
-                                <argument>-f</argument>
-                                <argument>${benchmark.forks}</argument>
-                                <argument>-rf</argument>
-                                <argument>json</argument>
-                                <argument>-rff</argument>
-                                <argument>${project.build.directory}/jmh-result.json</argument>
-                            </arguments>
                         </configuration>
                     </plugin>
                 </plugins>
