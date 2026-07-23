@@ -20,6 +20,8 @@ The project follows [Semantic Versioning](https://semver.org/).
   with immutable bump scenarios, five standard Greeks and implied volatility.
 - Explicit `InvalidModelDomainException` reporting for numerically invalid
   model parameter regions.
+- Bundled `pbivnorm` binaries and native smoke tests for macOS x86-64 and
+  Apple Silicon.
 
 ### Changed
 

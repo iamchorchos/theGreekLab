@@ -3,6 +3,13 @@
 All `pbivnorm` native binaries in this directory are compiled from
 `src/main/fortran/pbivnorm.f` and are licensed under GPL-2.0-or-later.
 
+Release builds package binaries in these runtime-selected directories:
+
+- `windows-x86_64` for Windows x86-64;
+- `linux-x86_64` for Linux x86-64;
+- `macos-x86_64` for Intel macOS; and
+- `macos-aarch64` for Apple Silicon macOS.
+
 The source is derived from the CRAN `pbivnorm` package version 0.6.0. Author
 attribution and provenance are recorded in the repository `NOTICE` file and in
 the comments retained in the Fortran source.

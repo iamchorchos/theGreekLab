@@ -89,3 +89,68 @@ jobs:
           if ($entries -notcontains "native/windows-x86_64/pbivnorm.dll") {
             throw "Bundled pbivnorm.dll is missing from $($mainJar.Name)."
           }
+
+  macos-native-smoke:
+    name: macOS bundled dylib smoke test (${{ matrix.architecture }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            architecture: x86_64
+          - runner: macos-14
+            architecture: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Install Fortran compiler
+        run: |
+          if ! command -v gfortran >/dev/null 2>&1; then
+            brew install gcc
+          fi
+          compiler="$(command -v gfortran || true)"
+          if [ -z "$compiler" ]; then
+            compiler="$(find "$(brew --prefix gcc)/bin" -maxdepth 1 -type f -name 'gfortran-*' | sort | tail -n 1)"
+          fi
+          test -n "$compiler"
+          echo "GFORTRAN=$compiler" >> "$GITHUB_ENV"
+
+      - name: Build native pbivnorm library
+        run: |
+          resourceDirectory="src/main/resources/native/macos-${{ matrix.architecture }}"
+          mkdir -p "$resourceDirectory"
+          "$GFORTRAN" -dynamiclib -O2 -std=legacy -ffixed-line-length-none \
+            -static-libgfortran -static-libquadmath -static-libgcc \
+            src/main/fortran/pbivnorm.f \
+            -o "$resourceDirectory/libpbivnorm.dylib"
+          otool -L "$resourceDirectory/libpbivnorm.dylib"
+          if otool -L "$resourceDirectory/libpbivnorm.dylib" \
+            | grep -E 'libgfortran|libquadmath|/opt/homebrew|/usr/local/opt'; then
+            echo "The bundled dylib must not depend on a Homebrew runtime." >&2
+            exit 1
+          fi
+
+      - name: Build JAR and test bundled dylib
+        env:
+          THEGREEKLAB_PBIVNORM_PATH: ""
+        run: ./mvnw -B -ntp "-Dtest=BivariateNormalTest" "-Dsurefire.failIfNoSpecifiedTests=false" package
+
+      - name: Verify dylib is packaged
+        run: |
+          mainJar="$(find thegreeklab-core/target -maxdepth 1 -name 'thegreeklab-*.jar' \
+            ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)"
+          test -n "$mainJar"
+          jar tf "$mainJar" | grep -Fx "native/macos-${{ matrix.architecture }}/libpbivnorm.dylib"
