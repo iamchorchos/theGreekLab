@@ -35,6 +35,13 @@ jobs:
       - name: Verify
         run: ./mvnw verify
 
+      - name: Verify Linux library is packaged
+        run: |
+          mainJar="$(find thegreeklab-core/target -maxdepth 1 -name 'thegreeklab-*.jar' \
+            ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)"
+          test -n "$mainJar"
+          jar tf "$mainJar" | grep -Fx "native/linux-x86_64/libpbivnorm.so"
+
       - name: Archive JaCoCo report
         uses: actions/upload-artifact@v4
         with:
