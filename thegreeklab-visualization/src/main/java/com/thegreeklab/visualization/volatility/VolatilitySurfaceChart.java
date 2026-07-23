@@ -8,7 +8,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
+import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -28,6 +30,12 @@ public final class VolatilitySurfaceChart extends Region {
     private static final double TOP_MARGIN = 48.0;
     private static final double BOTTOM_MARGIN = 84.0;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final ThreadLocal<NumberFormat> MONEYNESS_FORMAT =
+            ThreadLocal.withInitial(() -> decimalFormat(2));
+    private static final ThreadLocal<NumberFormat> DETAILED_MONEYNESS_FORMAT =
+            ThreadLocal.withInitial(() -> decimalFormat(4));
+    private static final ThreadLocal<NumberFormat> PERCENTAGE_FORMAT =
+            ThreadLocal.withInitial(VolatilitySurfaceChart::percentageFormat);
 
     private final VolatilitySurfaceGrid grid;
     private final Canvas canvas;
@@ -174,7 +182,11 @@ public final class VolatilitySurfaceChart extends Region {
             double coordinate = TOP_MARGIN
                     + (grid.moneynessCount() - index - 0.5) * plotHeight / grid.moneynessCount();
             graphics.setTextAlign(TextAlignment.RIGHT);
-            graphics.fillText(String.format("%.2f", grid.logStrikeToForwards().get(index)), LEFT_MARGIN - 8.0, coordinate - 6.0);
+            graphics.fillText(
+                    MONEYNESS_FORMAT.get().format(grid.logStrikeToForwards().get(index)),
+                    LEFT_MARGIN - 8.0,
+                    coordinate - 6.0
+            );
         }
     }
 
@@ -190,10 +202,14 @@ public final class VolatilitySurfaceChart extends Region {
         }
         graphics.setFill(Color.BLACK);
         graphics.setTextAlign(TextAlignment.LEFT);
-        graphics.fillText(String.format("%.2f%%", grid.minimumVolatility() * 100.0), legendX, legendY + 14.0);
+        graphics.fillText(
+                PERCENTAGE_FORMAT.get().format(grid.minimumVolatility()),
+                legendX,
+                legendY + 14.0
+        );
         graphics.setTextAlign(TextAlignment.RIGHT);
         graphics.fillText(
-                String.format("%.2f%%", grid.maximumVolatility() * 100.0),
+                PERCENTAGE_FORMAT.get().format(grid.maximumVolatility()),
                 legendX + legendWidth,
                 legendY + 14.0
         );
@@ -225,12 +241,35 @@ public final class VolatilitySurfaceChart extends Region {
                 grid.moneynessCount() - 1, (int) ((y - TOP_MARGIN) / plotHeight * grid.moneynessCount())
         );
         int moneynessIndex = grid.moneynessCount() - 1 - moneynessFromTop;
-        setAccessibleText(String.format(
-                "Expiry %s, log strike to forward %.4f, implied volatility %.2f percent",
-                DATE_FORMAT.format(EpochNanos.toUtc(grid.expiryTimestampsNanos().get(expiryIndex))),
-                grid.logStrikeToForwards().get(moneynessIndex),
-                grid.impliedVolatility(expiryIndex, moneynessIndex) * 100.0
-        ));
+        setAccessibleText(
+                "Expiry " + DATE_FORMAT.format(EpochNanos.toUtc(
+                        grid.expiryTimestampsNanos().get(expiryIndex)
+                ))
+                        + ", log strike to forward "
+                        + DETAILED_MONEYNESS_FORMAT.get().format(
+                                grid.logStrikeToForwards().get(moneynessIndex)
+                        )
+                        + ", implied volatility "
+                        + PERCENTAGE_FORMAT.get().format(
+                                grid.impliedVolatility(expiryIndex, moneynessIndex)
+                        )
+        );
+    }
+
+    private static NumberFormat decimalFormat(int fractionDigits) {
+        NumberFormat format = NumberFormat.getNumberInstance(Locale.ROOT);
+        format.setGroupingUsed(false);
+        format.setMinimumFractionDigits(fractionDigits);
+        format.setMaximumFractionDigits(fractionDigits);
+        return format;
+    }
+
+    private static NumberFormat percentageFormat() {
+        NumberFormat format = NumberFormat.getPercentInstance(Locale.ROOT);
+        format.setGroupingUsed(false);
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        return format;
     }
 
     private static int[] labelIndices(int count) {

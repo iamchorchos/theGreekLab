@@ -57,13 +57,7 @@ class ForwardBlack76Test {
 
     @Test
     void flatVolatilitySurfaceMatchesTheScalarVolatilityConstructor() {
-        FlatDiscountCurve rawFundingCurve = flatCurve(VALUATION_NANOS, 0.05);
-        EquityForwardCurve forwardCurve = new EquityForwardCurve(
-                VALUATION_NANOS,
-                100.0,
-                new FundingCurve(rawFundingCurve),
-                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
-        );
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
         OptionContract contract = contract(OptionType.CALL);
 
         double scalarPrice = new ForwardBlack76(
@@ -84,13 +78,7 @@ class ForwardBlack76Test {
 
     @Test
     void rejectsAVolatilitySurfaceWithADifferentValuationTimestamp() {
-        FlatDiscountCurve rawFundingCurve = flatCurve(VALUATION_NANOS, 0.05);
-        EquityForwardCurve forwardCurve = new EquityForwardCurve(
-                VALUATION_NANOS,
-                100.0,
-                new FundingCurve(rawFundingCurve),
-                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
-        );
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -105,13 +93,7 @@ class ForwardBlack76Test {
 
     @Test
     void queriesVolatilitySurfaceUsingExpiryAndLogStrikeToForward() {
-        FlatDiscountCurve rawFundingCurve = flatCurve(VALUATION_NANOS, 0.05);
-        EquityForwardCurve forwardCurve = new EquityForwardCurve(
-                VALUATION_NANOS,
-                100.0,
-                new FundingCurve(rawFundingCurve),
-                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
-        );
+        EquityForwardCurve forwardCurve = standardEquityForwardCurve();
         RecordingVolatilitySurface surface = new RecordingVolatilitySurface(
                 VALUATION_NANOS,
                 0.20
@@ -408,21 +390,21 @@ class ForwardBlack76Test {
     }
 
     private static double forwardBlackPrice(OptionType type) {
-        FlatDiscountCurve rawFundingCurve = flatCurve(VALUATION_NANOS, 0.05);
-        FundingCurve fundingCurve = new FundingCurve(rawFundingCurve);
-        EquityForwardCurve forwardCurve = new EquityForwardCurve(
-                VALUATION_NANOS,
-                100.0,
-                fundingCurve,
-                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
-        );
-
         return new ForwardBlack76(
                 contract(type),
-                forwardCurve,
+                standardEquityForwardCurve(),
                 0.20,
                 DAY_COUNT
         ).price();
+    }
+
+    private static EquityForwardCurve standardEquityForwardCurve() {
+        return new EquityForwardCurve(
+                VALUATION_NANOS,
+                100.0,
+                new FundingCurve(flatCurve(VALUATION_NANOS, 0.05)),
+                new DividendYieldCurve(flatCurve(VALUATION_NANOS, 0.02))
+        );
     }
 
     private static double blackScholesMertonPrice(OptionType type) {
