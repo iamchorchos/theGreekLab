@@ -126,6 +126,14 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Materialize release version in POMs
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for pom in pom.xml thegreeklab-core/pom.xml; do
+            sed -i "s#<revision>[^<]*</revision>#<revision>$RELEASE_VERSION</revision>#" "$pom"
+          done
+
       - name: Collect native pbivnorm libraries
         uses: actions/download-artifact@v4
         with:
@@ -137,8 +145,32 @@ jobs:
         env:
           EXPECTED_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          ./mvnw -B -ntp -Drevision="$EXPECTED_VERSION" -DskipTests process-resources
-          python3 -c 'import os, xml.etree.ElementTree as ET; root = ET.parse("thegreeklab-core/.flattened-pom.xml").getroot(); actual = root.find("{http://maven.apache.org/POM/4.0.0}version").text; expected = os.environ["EXPECTED_VERSION"]; assert actual == expected, f"Expected POM version {expected}, got {actual}"'
+          ./mvnw -B -ntp -DskipTests process-resources
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as element_tree
+
+          namespace = "{http://maven.apache.org/POM/4.0.0}"
+          expected = os.environ["EXPECTED_VERSION"]
+          paths = [
+              ".flattened-pom.xml",
+              "thegreeklab-core/.flattened-pom.xml",
+              "thegreeklab-visualization/.flattened-pom.xml",
+          ]
+          poms = [element_tree.parse(path).getroot() for path in paths]
+          versions = [
+              poms[0].find(namespace + "version").text,
+              poms[1].find(namespace + "version").text,
+              poms[2].find(namespace + "parent").find(namespace + "version").text,
+          ]
+
+          assert versions == [expected] * 3, (
+              f"Expected all published POM versions to be {expected}, got {versions}"
+          )
+          assert all("SNAPSHOT" not in open(path, encoding="utf-8").read() for path in paths), (
+              "Flattened release POM contains SNAPSHOT"
+          )
+          PY
 
       - name: Verify, sign and publish to Maven Central
         env:
