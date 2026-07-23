@@ -126,19 +126,17 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Materialize and validate release POM versions
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/validate-release-poms.sh "$RELEASE_VERSION"
+
       - name: Collect native pbivnorm libraries
         uses: actions/download-artifact@v4
         with:
           pattern: pbivnorm-*
           path: src/main/resources/native
           merge-multiple: true
-
-      - name: Validate published POM version
-        env:
-          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          ./mvnw -B -ntp -Drevision="$EXPECTED_VERSION" -DskipTests process-resources
-          python3 -c 'import os, xml.etree.ElementTree as ET; root = ET.parse("thegreeklab-core/.flattened-pom.xml").getroot(); actual = root.find("{http://maven.apache.org/POM/4.0.0}version").text; expected = os.environ["EXPECTED_VERSION"]; assert actual == expected, f"Expected POM version {expected}, got {actual}"'
 
       - name: Verify, sign and publish to Maven Central
         env:
