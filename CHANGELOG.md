@@ -6,99 +6,29 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [2.2.0] - 2026-07-22
+## [2.3.0] - 2026-07-23
 
 ### Added
 
-- Universal model-driven implied-volatility calibration for European,
-  American, lattice and discrete-dividend pricing models.
-- Immutable `ImpliedVolatilityResult` diagnostics covering convergence,
-  residual error, iteration counts and explicit failure statuses.
-- `VolatilityPricer` as the common calibration contract for immutable pricing
-  models, including recovery from trial points outside a model's valid domain.
-- Roll-Geske-Whaley American call pricing for a single discrete cash dividend,
-  with immutable bump scenarios, five standard Greeks and implied volatility.
-- Explicit `InvalidModelDomainException` reporting for numerically invalid
-  model parameter regions.
+- Curve market-data API: flat and log-linearly interpolated discount and
+  forward curves, dated node types, and explicit no-extrapolation semantics.
+- Nominal `FundingCurve` and `DividendYieldCurve` wrappers preventing equity
+  funding and dividend-yield inputs from being exchanged accidentally.
+- Curve-aware `ForwardBlack76` European option pricing from forward and
+  funding curves.
+- `VolatilitySurface` and `FlatVolatilitySurface`, plus surface-aware
+  `ForwardBlack76` constructors indexed by expiry and log strike-to-forward.
+- Optional `thegreeklab-visualization` JavaFX module with validated regular
+  surface sampling and a resizable implied-volatility heatmap.
 - Bundled `pbivnorm` binaries and native smoke tests for macOS x86-64 and
   Apple Silicon.
 
 ### Changed
 
-- Volatility analytics now live in `com.thegreeklab.math.volatility`; the
-  original `com.thegreeklab.math.VolatilityCalculator` remains as a deprecated
-  compatibility facade for the complete 2.1 API.
-- Numerical bump-and-revalue Greeks and reusable test assertions are
-  consolidated to remove duplicated model and fixture logic.
-
-### Fixed
-
-- Implied-volatility bracketing now searches valid model-domain edges without
-  hanging or failing on invalid intermediate lattice probabilities.
-
-## [2.1.0] - 2026-07-19
-
-### Added
-
-- Curve market-data API: flat and log-linearly interpolated discount and
-  forward curves, dated node types, and explicit no-extrapolation semantics.
-- Nominal `FundingCurve` and `DividendYieldCurve` wrappers preventing equity
-  funding and dividend-yield inputs from being exchanged accidentally.
-- Curve-aware `ForwardBlack76` European option pricing from forward and
-  funding curves, with an equity-forward convenience constructor.
-
-### Changed
-
 - `BlackScholes` shares its internal $d_1$ calculation with `ForwardBlack76`
   without changing existing model behavior.
-
-## [2.2.0] - 2026-07-22
-
-### Added
-
-- Universal model-driven implied-volatility calibration for European,
-  American, lattice and discrete-dividend pricing models.
-- Immutable `ImpliedVolatilityResult` diagnostics covering convergence,
-  residual error, iteration counts and explicit failure statuses.
-- `VolatilityPricer` as the common calibration contract for immutable pricing
-  models, including recovery from trial points outside a model's valid domain.
-- Roll-Geske-Whaley American call pricing for a single discrete cash dividend,
-  with immutable bump scenarios, five standard Greeks and implied volatility.
-- Explicit `InvalidModelDomainException` reporting for numerically invalid
-  model parameter regions.
-
-### Changed
-
-- Volatility analytics now live in `com.thegreeklab.math.volatility`; the
-  original `com.thegreeklab.math.VolatilityCalculator` remains as a deprecated
-  compatibility facade for the complete 2.1 API.
-- Numerical bump-and-revalue Greeks and reusable test assertions are
-  consolidated to remove duplicated model and fixture logic.
-
-### Fixed
-
-- Implied-volatility bracketing now searches valid model-domain edges without
-  hanging or failing on invalid intermediate lattice probabilities.
-
-## [2.1.0] - 2026-07-19
-
-### Added
-
-- Curve market-data API: flat and log-linearly interpolated discount and
-  forward curves, dated node types, and explicit no-extrapolation semantics.
-- Nominal `FundingCurve` and `DividendYieldCurve` wrappers preventing equity
-  funding and dividend-yield inputs from being exchanged accidentally.
-- Curve-aware `ForwardBlack76` European option pricing from forward and
-  funding curves, with an equity-forward convenience constructor.
-- `VolatilitySurface` and `FlatVolatilitySurface`, plus surface-aware
-  `ForwardBlack76` constructors indexed by expiry and log strike-to-forward.
-- Optional `thegreeklab-visualization` JavaFX module with validated regular
-  surface sampling and a resizable implied-volatility heatmap.
-
-### Changed
-
-- `BlackScholes` shares its internal $d_1$ calculation with `ForwardBlack76`
-  without changing existing model behavior.
+- Release artifacts and CI validate bundled native libraries on Windows
+  x86-64, Linux x86-64, macOS x86-64 and macOS Apple Silicon.
 
 ## [2.2.0] - 2026-07-22
 

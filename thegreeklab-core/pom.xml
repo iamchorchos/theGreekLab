@@ -55,7 +55,7 @@
     </ciManagement>
 
     <properties>
-        <revision>2.2.0-SNAPSHOT</revision>
+        <revision>2.3.0-SNAPSHOT</revision>
         <java.version>22</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -70,7 +70,7 @@
         <central.publishing.version>0.11.0</central.publishing.version>
         <central.skipPublishing>false</central.skipPublishing>
         <maven.gpg.version>3.2.8</maven.gpg.version>
-        <api.baseline.version>2.1.0</api.baseline.version>
+        <api.baseline.version>2.2.0</api.baseline.version>
         <spotbugs.annotations.version>4.8.6</spotbugs.annotations.version>
         <jacocoArgLine/>
     </properties>

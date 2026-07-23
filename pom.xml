@@ -18,7 +18,7 @@
     </modules>
 
     <properties>
-        <revision>2.2.0-SNAPSHOT</revision>
+        <revision>2.3.0-SNAPSHOT</revision>
         <java.version>22</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <javafx.version>22.0.2</javafx.version>
