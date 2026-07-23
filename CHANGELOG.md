@@ -6,6 +6,36 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-22
+
+### Added
+
+- Universal model-driven implied-volatility calibration for European,
+  American, lattice and discrete-dividend pricing models.
+- Immutable `ImpliedVolatilityResult` diagnostics covering convergence,
+  residual error, iteration counts and explicit failure statuses.
+- `VolatilityPricer` as the common calibration contract for immutable pricing
+  models, including recovery from trial points outside a model's valid domain.
+- Roll-Geske-Whaley American call pricing for a single discrete cash dividend,
+  with immutable bump scenarios, five standard Greeks and implied volatility.
+- Explicit `InvalidModelDomainException` reporting for numerically invalid
+  model parameter regions.
+
+### Changed
+
+- Volatility analytics now live in `com.thegreeklab.math.volatility`; the
+  original `com.thegreeklab.math.VolatilityCalculator` remains as a deprecated
+  compatibility facade for the complete 2.1 API.
+- Numerical bump-and-revalue Greeks and reusable test assertions are
+  consolidated to remove duplicated model and fixture logic.
+
+### Fixed
+
+- Implied-volatility bracketing now searches valid model-domain edges without
+  hanging or failing on invalid intermediate lattice probabilities.
+
+## [2.1.0] - 2026-07-19
+
 ### Added
 
 - Curve market-data API: flat and log-linearly interpolated discount and
