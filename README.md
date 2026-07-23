@@ -30,6 +30,8 @@ numerical tests for vanilla European and American option models.
 - European option pricing:
   - Black-Scholes-Merton for equity options
   - Black-76 for futures options
+  - curve-aware Forward Black-76 for European options priced from forward and
+    funding curves
   - Garman-Kohlhagen for FX options
   - deterministic discrete cash-dividend schedules
   - Simple, Haug-Haug, Bos-Gairat-Shepeleva and Bos-Vandermark
@@ -61,6 +63,8 @@ numerical tests for vanilla European and American option models.
   - equity frame
   - futures frame
   - FX frame
+  - flat and log-linearly interpolated discount and forward curves
+  - nominal funding and dividend-yield curve roles for equity forwards
 - JUnit test suite with numerical cross-validation data
 
 ## Requirements
@@ -294,6 +298,7 @@ src/main/java/com/thegreeklab
   finance/contract/           option contract model
   finance/enums/              option type and exercise style enums
   finance/exception/          domain-specific exceptions
+  finance/curves/             discount, forward and role-specific curve types
   finance/frame/              market-data frames
   finance/model/american/     American option models
     approximations/           Bjerksund-Stensland 2002
@@ -331,6 +336,16 @@ src/test/resources            numerical reference datasets
   - `EquityFrame`: `b = r - q`
   - `FuturesFrame`: `b = 0`
   - `FXFrame`: `b = domesticRate - foreignRate`
+- `ForwardBlack76` prices European options from a `ForwardCurve` and a
+  `FundingCurve`. Its `EquityForwardCurve` overload derives the funding curve
+  from the equity-forward input, so dividend and funding discounting cannot be
+  exchanged accidentally.
+- `FlatDiscountCurve` preserves the existing scalar-rate behavior.
+  `InterpolatedDiscountCurve` and `InterpolatedForwardCurve` preserve supplied
+  nodes and use log-linear interpolation without extrapolation. They are market
+  data containers, not bootstrapping or curve-calibration engines.
+- Curve-aware Forward Black-76 currently exposes price only; curve and
+  forward-risk sensitivities require explicit bump and interpolation policies.
 - Invalid inputs fail fast through domain-specific exceptions.
 - Binomial Greeks are finite-difference based and can be sensitive to tree
   depth, bump size and near-zero option values.
@@ -357,6 +372,10 @@ The test suite covers:
 - Bjerksund-Stensland expiry, no-arbitrage bounds and numerical fallback
 - Bjerksund-Stensland Greeks in the European limit and American exercise region
 - CRR model behavior, identities and numerical Greeks
+- flat and interpolated discount/forward curves, including timestamp, role and
+  interpolation-domain validation
+- curve-aware Forward Black-76 against both Black-Scholes-Merton flat-curve
+  equivalence and direct forward quotes
 
 The publications, table references, fixture provenance and numerical-data
 limitations are recorded in [Sources and references](docs/REFERENCES.md).

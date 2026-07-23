@@ -23,6 +23,15 @@ The library separates option contracts from market data.
 - `FuturesFrame` for futures options
 - `FXFrame` for currency options
 
+Curve-aware Forward Black-76 pricing uses a separate market-data path:
+
+- `DiscountCurve` returns the present value of one unit of currency at a
+  timestamp.
+- `ForwardCurve` returns the forward price for delivery at a timestamp.
+- `FundingCurve` and `DividendYieldCurve` are nominal wrappers around a
+  `DiscountCurve`. They prevent funding and dividend inputs from being swapped
+  when constructing an `EquityForwardCurve`.
+
 ### Expiration and day count
 
 Version 2 represents contract expiration only through
@@ -310,6 +319,80 @@ double delta = model.delta();
 double theta = model.theta();
 double rho = model.rho();
 ```
+
+## Curve-Aware Forward Black-76
+
+`ForwardBlack76` prices a European option from a forward curve and a funding
+curve rather than from scalar rate and carry inputs. Use it when the forward or
+discount factor varies by expiry. It currently exposes `price()` only; it does
+not implement the `StandardGreeks` interface.
+
+For equity, construct the forward from spot, a funding curve and a continuous
+dividend-yield curve. The overload taking `EquityForwardCurve` automatically
+uses the embedded `FundingCurve` for discounting.
+
+```java
+import com.thegreeklab.finance.contract.OptionContract;
+import com.thegreeklab.finance.curves.DiscountFactorNode;
+import com.thegreeklab.finance.curves.DividendYieldCurve;
+import com.thegreeklab.finance.curves.EquityForwardCurve;
+import com.thegreeklab.finance.curves.FundingCurve;
+import com.thegreeklab.finance.curves.InterpolatedDiscountCurve;
+import com.thegreeklab.finance.enums.Option;
+import com.thegreeklab.finance.enums.OptionType;
+import com.thegreeklab.finance.model.european.ForwardBlack76;
+import com.thegreeklab.finance.time.DayCountConvention;
+import com.thegreeklab.finance.time.EpochNanos;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.List;
+
+ZonedDateTime valuation = ZonedDateTime.now(ZoneOffset.UTC);
+ZonedDateTime expiry = valuation.plusYears(1);
+long valuationNanos = EpochNanos.from(valuation);
+long expiryNanos = EpochNanos.from(expiry);
+
+OptionContract call = new OptionContract(
+        "AAPL", OptionType.CALL, Option.EUROPEAN, 210.0, expiry, 100
+);
+
+InterpolatedDiscountCurve rawFunding = new InterpolatedDiscountCurve(
+        valuationNanos,
+        List.of(
+                new DiscountFactorNode(EpochNanos.from(valuation.plusMonths(6)), 0.978),
+                new DiscountFactorNode(expiryNanos, 0.952)
+        )
+);
+InterpolatedDiscountCurve rawDividendYield = new InterpolatedDiscountCurve(
+        valuationNanos,
+        List.of(
+                new DiscountFactorNode(EpochNanos.from(valuation.plusMonths(6)), 0.994),
+                new DiscountFactorNode(expiryNanos, 0.988)
+        )
+);
+
+FundingCurve funding = new FundingCurve(rawFunding);
+DividendYieldCurve dividendYield = new DividendYieldCurve(rawDividendYield);
+EquityForwardCurve forward = new EquityForwardCurve(
+        valuationNanos, 205.35, funding, dividendYield
+);
+
+ForwardBlack76 model = new ForwardBlack76(
+        call, forward, 0.22, DayCountConvention.ACT_365F
+);
+
+double price = model.price();
+```
+
+`InterpolatedDiscountCurve` anchors the valuation timestamp at `DF(t0) = 1`
+and uses log-linear interpolation between its dated nodes. It does not
+extrapolate, so each curve must include a node at or after the option expiry.
+
+For directly quoted futures or forwards, use `InterpolatedForwardCurve`; its
+first `ForwardPriceNode` must be at valuation, making `F(t0)` explicit. Pass
+that curve and a `FundingCurve` to the general `ForwardBlack76` constructor.
+It also does not extrapolate, so its final node must be at or after expiry.
 
 ## Cox-Ross-Rubenstein American Option
 

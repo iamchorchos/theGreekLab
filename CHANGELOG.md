@@ -6,6 +6,20 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Curve market-data API: flat and log-linearly interpolated discount and
+  forward curves, dated node types, and explicit no-extrapolation semantics.
+- Nominal `FundingCurve` and `DividendYieldCurve` wrappers preventing equity
+  funding and dividend-yield inputs from being exchanged accidentally.
+- Curve-aware `ForwardBlack76` European option pricing from forward and
+  funding curves, with an equity-forward convenience constructor.
+
+### Changed
+
+- `BlackScholes` shares its internal $d_1$ calculation with `ForwardBlack76`
+  without changing existing model behavior.
+
 ## [2.2.0] - 2026-07-22
 
 ### Added

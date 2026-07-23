@@ -355,7 +355,7 @@ public sealed abstract class BlackScholes implements Greeks permits BlackScholes
      * @param invVolSqrtT precomputed {@code 1 / (sigma * sqrt(T))} for performance
      * @return the value of {@code d1}
      */
-    private static double computeD1(double s, double k, double t, double b, double volSq, double invVolSqrtT) {
+    static double computeD1(double s, double k, double t, double b, double volSq, double invVolSqrtT) {
         return (FastMath.log(s / k) + t * (b + (volSq * 0.5))) * invVolSqrtT;
     }
 

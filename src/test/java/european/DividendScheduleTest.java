@@ -14,6 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class DividendScheduleTest {
 
     @Test
+    void acceptsEmptySchedule() {
+        DividendSchedule schedule = new DividendSchedule(List.of());
+
+        assertEquals(List.of(), schedule.dividends());
+    }
+
+    @Test
     void sortsAndCopies() {
         CashDividend later = new CashDividend(20L, 2.0);
         CashDividend earlier = new CashDividend(10L, 1.0);
