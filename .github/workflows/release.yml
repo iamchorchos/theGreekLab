@@ -13,9 +13,82 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-libraries:
+    name: Build native library (${{ matrix.resource-directory }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            resource-directory: linux-x86_64
+            library-name: libpbivnorm.so
+            platform: linux
+          - runner: macos-13
+            resource-directory: macos-x86_64
+            library-name: libpbivnorm.dylib
+            platform: macos
+          - runner: macos-14
+            resource-directory: macos-aarch64
+            library-name: libpbivnorm.dylib
+            platform: macos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install macOS Fortran compiler
+        if: matrix.platform == 'macos'
+        run: |
+          if ! command -v gfortran >/dev/null 2>&1; then
+            brew install gcc
+          fi
+          compiler="$(command -v gfortran || true)"
+          if [ -z "$compiler" ]; then
+            compiler="$(find "$(brew --prefix gcc)/bin" -maxdepth 1 -type f -name 'gfortran-*' | sort | tail -n 1)"
+          fi
+          test -n "$compiler"
+          echo "GFORTRAN=$compiler" >> "$GITHUB_ENV"
+
+      - name: Build native pbivnorm library
+        run: |
+          resourceDirectory="src/main/resources/native/${{ matrix.resource-directory }}"
+          mkdir -p "$resourceDirectory"
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            "$GFORTRAN" -dynamiclib -O2 -std=legacy -ffixed-line-length-none \
+              -static-libgfortran -static-libquadmath -static-libgcc \
+              src/main/fortran/pbivnorm.f \
+              -o "$resourceDirectory/${{ matrix.library-name }}"
+            otool -L "$resourceDirectory/${{ matrix.library-name }}"
+            if otool -L "$resourceDirectory/${{ matrix.library-name }}" \
+              | grep -E 'libgfortran|libquadmath|/opt/homebrew|/usr/local/opt'; then
+              echo "The bundled dylib must not depend on a Homebrew runtime." >&2
+              exit 1
+            fi
+          else
+            gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
+              src/main/fortran/pbivnorm.f \
+              -o "$resourceDirectory/${{ matrix.library-name }}"
+          fi
+
+      - name: Upload native library
+        run: |
+          artifactDirectory="release-native/${{ matrix.resource-directory }}"
+          mkdir -p "$artifactDirectory"
+          cp "src/main/resources/native/${{ matrix.resource-directory }}/${{ matrix.library-name }}" \
+            "$artifactDirectory/${{ matrix.library-name }}"
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: pbivnorm-${{ matrix.resource-directory }}
+          path: release-native
+          if-no-files-found: error
+
   release:
     name: Build and publish release artifacts
     runs-on: ubuntu-latest
+    needs: native-libraries
 
     steps:
       - name: Checkout
@@ -53,12 +126,12 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
-      - name: Build native pbivnorm library
-        run: |
-          mkdir -p src/main/resources/native/linux-x86_64
-          gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
-            src/main/fortran/pbivnorm.f \
-            -o src/main/resources/native/linux-x86_64/libpbivnorm.so
+      - name: Collect native pbivnorm libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pbivnorm-*
+          path: src/main/resources/native
+          merge-multiple: true
 
       - name: Validate published POM version
         env:

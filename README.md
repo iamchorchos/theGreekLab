@@ -80,9 +80,10 @@ numerical tests for vanilla European and American option models.
 The project includes Maven wrapper scripts, so a global Maven installation is
 not required.
 
-A Windows x86-64 `pbivnorm.dll` is bundled with the project. GitHub Actions
-builds the Linux x86-64 library from `src/main/fortran/pbivnorm.f` before
-running Maven. Other platforms can supply an external library through:
+Release artifacts bundle `pbivnorm` for Windows x86-64, Linux x86-64, macOS
+x86-64 and macOS Apple Silicon. GitHub Actions builds the Linux and macOS
+libraries from `src/main/fortran/pbivnorm.f` and smoke-tests each native
+runtime. Other platforms can supply an external library through:
 
 ```text
 -Dthegreeklab.pbivnorm.path=/absolute/path/to/library

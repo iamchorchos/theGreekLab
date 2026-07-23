@@ -704,19 +704,41 @@ import com.thegreeklab.math.BivariateNormal;
 double probability = BivariateNormal.cdf(0.25, -0.50, 0.60);
 ```
 
-Windows x86-64 uses the bundled library:
+Release artifacts bundle the native library for Windows x86-64, Linux x86-64,
+macOS x86-64 and macOS Apple Silicon. The runtime selects the matching resource
+from `native/<platform>-<architecture>/`.
+
+Windows x86-64 uses:
 
 ```text
 src/main/resources/native/windows-x86_64/pbivnorm.dll
 ```
 
-On Linux x86-64, build the library before running the application or tests:
+When building from a source checkout on Linux x86-64, create:
 
 ```bash
 mkdir -p src/main/resources/native/linux-x86_64
 gfortran -shared -fPIC -O2 -std=legacy -ffixed-line-length-none \
   src/main/fortran/pbivnorm.f \
   -o src/main/resources/native/linux-x86_64/libpbivnorm.so
+```
+
+On macOS, the CI pipeline builds both Intel and Apple Silicon variants with
+GNU Fortran. To build the matching library from a source checkout:
+
+```bash
+brew install gcc
+compiler="$(command -v gfortran || find "$(brew --prefix gcc)/bin" \
+  -maxdepth 1 -type f -name 'gfortran-*' | sort | tail -n 1)"
+case "$(uname -m)" in
+  x86_64) target=macos-x86_64 ;;
+  arm64) target=macos-aarch64 ;;
+  *) echo "Unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+mkdir -p "src/main/resources/native/$target"
+"$compiler" -dynamiclib -O2 -std=legacy -ffixed-line-length-none \
+  -static-libgfortran -static-libquadmath -static-libgcc src/main/fortran/pbivnorm.f \
+  -o "src/main/resources/native/$target/libpbivnorm.dylib"
 ```
 
 An external library can be selected with a JVM property:
@@ -734,8 +756,7 @@ THEGREEKLAB_PBIVNORM_PATH=/absolute/path/to/library
 ```
 
 The external file must export either `pbivnorm_` (the usual GNU Fortran name)
-or `pbivnorm`. macOS and ARM64 currently require an external build because no
-matching binary is bundled.
+or `pbivnorm`.
 
 ### Native component license
 
