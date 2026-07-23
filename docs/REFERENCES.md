@@ -15,7 +15,7 @@ algorithm does not mean that source code was copied from the cited work.
 | --- | --- | --- |
 | Black-Scholes | Fischer Black and Myron Scholes, "The Pricing of Options and Corporate Liabilities," *Journal of Political Economy* 81(3), 1973, pp. 637-654. [doi:10.1086/260062](https://doi.org/10.1086/260062) | Foundation of the European equity-option price and Greeks. |
 | Merton extension | Robert C. Merton, "Theory of Rational Option Pricing," *The Bell Journal of Economics and Management Science* 4(1), 1973, pp. 141-183. [doi:10.2307/3003143](https://doi.org/10.2307/3003143) | Continuous dividend yield and the generalized cost-of-carry formulation. |
-| Black-76 | Fischer Black, "The Pricing of Commodity Contracts," *Journal of Financial Economics* 3(1-2), 1976, pp. 167-179. [doi:10.1016/0304-405X(76)90024-6](https://doi.org/10.1016/0304-405X(76)90024-6) | European options whose model input is a futures price. |
+| Black-76 | Fischer Black, "The Pricing of Commodity Contracts," *Journal of Financial Economics* 3(1-2), 1976, pp. 167-179. [doi:10.1016/0304-405X(76)90024-6](https://doi.org/10.1016/0304-405X(76)90024-6) | Flat-futures `Black76` and the forward Black formula used by curve-aware `ForwardBlack76`. |
 | Garman-Kohlhagen | Mark B. Garman and Steven W. Kohlhagen, "Foreign Currency Option Values," *Journal of International Money and Finance* 2(3), 1983, pp. 231-237. [doi:10.1016/S0261-5606(83)80001-1](https://doi.org/10.1016/S0261-5606(83)80001-1) | European FX options with domestic and foreign rates. |
 | Formula notation and Greeks | Espen Gaarder Haug, *The Complete Guide to Option Pricing Formulas*, 2nd ed., McGraw-Hill, 2007, ISBN 978-0-07-138997-6. [Publisher page](https://www.mheducation.com/highered/mhp/product/complete-guide-to-option-pricing-formulas-2e.html) | Generalized cost-of-carry notation, analytical Greeks, tree formulas and published numerical tables. |
 
@@ -61,6 +61,12 @@ These methods are analytical approximations for deterministic cash dividends;
 they are not exact solutions of a discrete-jump process. See
 [MATH.md](MATH.md#discrete-cash-dividend-approximations) for their assumptions
 and formulas.
+
+## Curves and interpolation
+
+| Area | Primary source | Use in TheGreekLab |
+| --- | --- | --- |
+| Curve interpolation | Patrick S. Hagan and Graeme West, "Interpolation Methods for Curve Construction," *Applied Mathematical Finance* 13(2), 2006, pp. 89-129. [doi:10.1080/13504860500396032](https://doi.org/10.1080/13504860500396032) | Background for treating interpolation as an explicit curve-construction policy. The current `InterpolatedDiscountCurve` and `InterpolatedForwardCurve` deliberately use the simpler log-linear interpolation of positive node values; they do not implement the paper's monotone-convex or minimal interpolators. |
 
 ## Numerical and statistical algorithms
 

@@ -63,6 +63,65 @@ D_r = e^{-rT}
 D_b = e^{(b-r)T}
 ```
 
+## Curve Market Data and Forward Black-76
+
+The curve-aware API separates the forward used in the option distribution from
+the funding discount factor applied to the payoff. Let $D_r(T)$ denote the
+funding discount factor and $F(T)$ the forward price for delivery at $T$.
+`FundingCurve` and `DividendYieldCurve` are distinct nominal API types so that
+their economic roles cannot be exchanged at a call site.
+
+For an equity with spot $S$ and continuous-dividend discount factor $D_q(T)$,
+`EquityForwardCurve` constructs:
+
+```math
+F(T)=S\frac{D_q(T)}{D_r(T)}
+```
+
+With flat continuously compounded rates, $D_r(T)=e^{-rT}$ and
+$D_q(T)=e^{-qT}$, which reduces to:
+
+```math
+F(T)=S e^{(r-q)T}
+```
+
+`ForwardBlack76` uses the forward form of the Black formula:
+
+```math
+d_1=\frac{\ln(F(T)/K)+\sigma^2T/2}{\sigma\sqrt{T}},
+\qquad d_2=d_1-\sigma\sqrt{T}
+```
+
+```math
+C=D_r(T)\left[F(T)N(d_1)-KN(d_2)\right]
+```
+
+```math
+P=D_r(T)\left[KN(-d_2)-F(T)N(-d_1)\right]
+```
+
+At $T=0$, the pricer returns intrinsic value and requires $D_r(0)=1$ within
+numerical tolerance.
+
+### Curve Interpolation and Scope
+
+`FlatDiscountCurve` evaluates $e^{-rT}$. `InterpolatedDiscountCurve` has an
+implicit valuation node $D_r(0)=1$ and interpolates the logarithm of positive
+discount factors between supplied nodes. `InterpolatedForwardCurve` requires
+an explicit valuation node $F(0)$ and uses the same interpolation for positive
+forward prices. For either value $V$, interpolation between adjacent nodes is:
+
+```math
+\ln V(t)=\ln V(t_i)+
+\frac{t-t_i}{t_{i+1}-t_i}
+\left[\ln V(t_{i+1})-\ln V(t_i)\right]
+```
+
+The implementations preserve node values, forbid timestamps before valuation
+and do not extrapolate past the final node. They do not bootstrap curves from
+market instruments, apply calendar conventions, clean arbitrage, or provide
+curve Greeks. Those policies are deliberately outside the current API.
+
 ## Generalized European Option Price
 
 Call:
@@ -368,17 +427,9 @@ Therefore:
 D_b = e^{-rT}
 ```
 
-Call:
-
-```math
-C = e^{-rT}\left(FN(d_1)-KN(d_2)\right)
-```
-
-Put:
-
-```math
-P = e^{-rT}\left(KN(-d_2)-FN(-d_1)\right)
-```
+The flat-rate `Black76` model is the `FuturesFrame` specialization of the
+forward Black formula above: $D_r(T)=e^{-rT}$ and the supplied futures price is
+$F(T)$. `ForwardBlack76` generalizes the same price formula to curve inputs.
 
 Black-76 rho is specialized because $d_1$ and $d_2$ do not depend on $r$ when
 $F$ is supplied directly:
