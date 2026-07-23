@@ -343,6 +343,7 @@ import com.thegreeklab.finance.enums.OptionType;
 import com.thegreeklab.finance.model.european.ForwardBlack76;
 import com.thegreeklab.finance.time.DayCountConvention;
 import com.thegreeklab.finance.time.EpochNanos;
+import com.thegreeklab.finance.volatility.FlatVolatilitySurface;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -377,9 +378,12 @@ DividendYieldCurve dividendYield = new DividendYieldCurve(rawDividendYield);
 EquityForwardCurve forward = new EquityForwardCurve(
         valuationNanos, 205.35, funding, dividendYield
 );
+FlatVolatilitySurface volatility = new FlatVolatilitySurface(
+        valuationNanos, 0.22
+);
 
 ForwardBlack76 model = new ForwardBlack76(
-        call, forward, 0.22, DayCountConvention.ACT_365F
+        call, forward, volatility, DayCountConvention.ACT_365F
 );
 
 double price = model.price();
@@ -393,6 +397,76 @@ For directly quoted futures or forwards, use `InterpolatedForwardCurve`; its
 first `ForwardPriceNode` must be at valuation, making `F(t0)` explicit. Pass
 that curve and a `FundingCurve` to the general `ForwardBlack76` constructor.
 It also does not extrapolate, so its final node must be at or after expiry.
+
+`VolatilitySurface` is indexed by expiry and `ln(K / F(T))`, not raw strike.
+`FlatVolatilitySurface` returns one validated volatility at every supported
+point and preserves the behavior of the scalar-volatility constructors.
+
+## JavaFX Volatility Surface Heatmap
+
+The optional `thegreeklab-visualization` artifact depends on JavaFX and keeps
+GUI concerns outside the pricing artifact:
+
+```xml
+<dependency>
+    <groupId>io.github.iamchorchos</groupId>
+    <artifactId>thegreeklab-visualization</artifactId>
+    <version>2.2.0</version>
+</dependency>
+```
+
+Use `VolatilitySurfaceCharts.heatmap(...)` to sample a surface on regular
+expiry and `ln(K / F(T))` axes. The result is a resizable JavaFX node; the
+application owns the JavaFX lifecycle and places it in its own scene.
+
+```java
+import com.thegreeklab.finance.time.EpochNanos;
+import com.thegreeklab.finance.volatility.FlatVolatilitySurface;
+import com.thegreeklab.visualization.volatility.VolatilitySurfaceChart;
+import com.thegreeklab.visualization.volatility.VolatilitySurfaceCharts;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+
+public final class SurfaceApplication extends Application {
+
+    @Override
+    public void start(Stage stage) {
+        ZonedDateTime valuation = ZonedDateTime.now(ZoneOffset.UTC);
+        long valuationNanos = EpochNanos.from(valuation);
+        long lastExpiryNanos = EpochNanos.from(valuation.plusYears(2));
+
+        FlatVolatilitySurface surface = new FlatVolatilitySurface(
+                valuationNanos, 0.22
+        );
+        VolatilitySurfaceChart chart = VolatilitySurfaceCharts.heatmap(
+                surface,
+                lastExpiryNanos,
+                13,
+                -0.40,
+                0.40,
+                17
+        );
+
+        stage.setScene(new Scene(new StackPane(chart), 900, 600));
+        stage.setTitle("Implied volatility surface");
+        stage.show();
+    }
+
+    public static void main(String[] arguments) {
+        launch(arguments);
+    }
+}
+```
+
+The chart colors sampled volatility values; moving the pointer over a cell
+updates its accessibility description with expiry, moneyness and volatility.
+For a flat surface it is intentionally a uniform heatmap. A future interpolated
+surface will render a smile or term structure without changing this API.
 
 ## Cox-Ross-Rubenstein American Option
 

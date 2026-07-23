@@ -14,6 +14,10 @@ The project follows [Semantic Versioning](https://semver.org/).
   funding and dividend-yield inputs from being exchanged accidentally.
 - Curve-aware `ForwardBlack76` European option pricing from forward and
   funding curves, with an equity-forward convenience constructor.
+- `VolatilitySurface` and `FlatVolatilitySurface`, plus surface-aware
+  `ForwardBlack76` constructors indexed by expiry and log strike-to-forward.
+- Optional `thegreeklab-visualization` JavaFX module with validated regular
+  surface sampling and a resizable implied-volatility heatmap.
 
 ### Changed
 

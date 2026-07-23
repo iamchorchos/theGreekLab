@@ -1,8 +1,10 @@
 # Publishing to Maven Central
 
 TheGreekLab is published through the Sonatype Central Portal with the Maven
-coordinates `io.github.iamchorchos:thegreeklab`. Publishing is restricted to
-semantic-version tags that point to commits reachable from `main`.
+coordinates `io.github.iamchorchos:thegreeklab` and the optional JavaFX
+artifact `io.github.iamchorchos:thegreeklab-visualization`. Publishing is
+restricted to semantic-version tags that point to commits reachable from
+`main`.
 
 ## One-time maintainer setup
 
@@ -33,10 +35,10 @@ git push origin v2.2.0
 ```
 
 The release workflow validates the tag, builds the Linux native library, runs
-the complete Maven verification lifecycle, creates the source and Javadoc
-JARs, signs every required artifact, and publishes them through the Central
-Portal. It waits until Central reports the deployment as published before it
-creates or updates the corresponding GitHub Release and checksums.
+the complete Maven verification lifecycle, creates source and Javadoc JARs for
+both artifacts, signs every required artifact, and publishes them through the
+Central Portal. It waits until Central reports the deployment as published
+before it creates or updates the corresponding GitHub Release and checksums.
 Before uploading, the workflow also verifies that the flattened consumer POM
 contains the literal version derived from the release tag.
 

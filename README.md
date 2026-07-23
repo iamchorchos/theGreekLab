@@ -59,6 +59,8 @@ numerical tests for vanilla European and American option models.
   - historical close-to-close volatility
   - Parkinson high-low volatility
   - implied volatility via Brent root finding
+  - flat implied-volatility surface indexed by expiry and log strike-to-forward
+  - optional JavaFX heatmap visualization for sampled volatility surfaces
 - Market data abstractions:
   - equity frame
   - futures frame
@@ -73,6 +75,7 @@ numerical tests for vanilla European and American option models.
 - Maven, or the included Maven wrapper
 - Native `pbivnorm` library for the current platform when using
   Bjerksund-Stensland 2002
+- JavaFX is required only by the optional `thegreeklab-visualization` module
 
 The project includes Maven wrapper scripts, so a global Maven installation is
 not required.
@@ -104,6 +107,17 @@ Add the library to a Maven project with:
 <dependency>
     <groupId>io.github.iamchorchos</groupId>
     <artifactId>thegreeklab</artifactId>
+    <version>2.2.0</version>
+</dependency>
+```
+
+JavaFX volatility-surface charts are distributed separately, so core pricing
+users do not receive a GUI dependency:
+
+```xml
+<dependency>
+    <groupId>io.github.iamchorchos</groupId>
+    <artifactId>thegreeklab-visualization</artifactId>
     <version>2.2.0</version>
 </dependency>
 ```
@@ -142,9 +156,10 @@ To run all verification checks and generate the JaCoCo coverage report:
 ./mvnw verify
 ```
 
-The local HTML report is written to `target/site/jacoco/index.html`. The build
-requires at least 85% line coverage and 65% branch coverage. CI also archives
-the complete report and uploads `jacoco.xml` to Codacy.
+The core-library HTML report is written to
+`thegreeklab-core/target/site/jacoco/index.html`. The build requires at least
+85% line coverage and 65% branch coverage. CI also archives the complete report
+and uploads `jacoco.xml` to Codacy.
 
 After a release is available from Maven Central, compare the current public and
 protected API with that explicit baseline using japicmp:
@@ -152,17 +167,17 @@ protected API with that explicit baseline using japicmp:
 Windows PowerShell:
 
 ```powershell
-.\mvnw.cmd verify -Papi-compatibility "-Dapi.baseline.version=2.1.0"
+.\mvnw.cmd -pl thegreeklab-core verify -Papi-compatibility "-Dapi.baseline.version=2.1.0"
 ```
 
 Linux/macOS:
 
 ```bash
-./mvnw verify -Papi-compatibility -Dapi.baseline.version=2.1.0
+./mvnw -pl thegreeklab-core verify -Papi-compatibility -Dapi.baseline.version=2.1.0
 ```
 
 The compatibility profile fails on binary- or source-incompatible changes and
-writes its reports to `target/japicmp`. Keeping the baseline version explicit
+writes its reports to `thegreeklab-core/target/japicmp`. Keeping the baseline version explicit
 makes local and CI results reproducible. Enable this profile in CI after the
 first `2.x` artifact has been published; the intentional `1.x` to `2.x` API
 migration is the bootstrap boundary.
@@ -181,13 +196,13 @@ The JMH suite measures:
 Run the benchmark profile on Windows:
 
 ```powershell
-.\mvnw.cmd -Pbenchmarks test-compile exec:exec
+.\mvnw.cmd -pl thegreeklab-core -Pbenchmarks test-compile exec:exec
 ```
 
 On Linux/macOS:
 
 ```bash
-./mvnw -Pbenchmarks test-compile exec:exec
+./mvnw -pl thegreeklab-core -Pbenchmarks test-compile exec:exec
 ```
 
 The model comparison uses a one-year American put with strike 100, spot 95,
@@ -198,13 +213,13 @@ instead of reporting a cached price.
 To run only the American-option benchmark:
 
 ```powershell
-.\mvnw.cmd -Pbenchmarks test-compile exec:exec "-Dbenchmark.include=.*AmericanOptionBenchmark.*"
+.\mvnw.cmd -pl thegreeklab-core -Pbenchmarks test-compile exec:exec "-Dbenchmark.include=.*AmericanOptionBenchmark.*"
 ```
 
 Results are printed to the console and saved as
-`target/jmh-result.json`. Run benchmarks outside a debugger on an otherwise
-idle machine; absolute timings depend on the JDK, native library, CPU and
-operating system.
+`thegreeklab-core/target/jmh-result.json`. Run benchmarks outside a debugger
+on an otherwise idle machine; absolute timings depend on the JDK, native
+library, CPU and operating system.
 
 ## Code Quality
 
@@ -307,6 +322,7 @@ src/main/java/com/thegreeklab
   finance/model/european/     European option models
     discrete/                 cash dividends, schedules and adjustment models
   finance/model/greeks/       Greeks interface
+  finance/volatility/         implied-volatility surface market data
   finance/numerical/          numerical utilities
   math/                       volatility, distributions and numerical helpers
 
@@ -315,6 +331,9 @@ src/main/resources/native     bundled platform libraries
 
 src/test/java                 unit and cross-validation tests
 src/test/resources            numerical reference datasets
+
+thegreeklab-core/             Maven artifact for the core library
+thegreeklab-visualization/    optional JavaFX visualization artifact
 ```
 
 ## Design Notes
@@ -346,6 +365,12 @@ src/test/resources            numerical reference datasets
   data containers, not bootstrapping or curve-calibration engines.
 - Curve-aware Forward Black-76 currently exposes price only; curve and
   forward-risk sensitivities require explicit bump and interpolation policies.
+- `FlatVolatilitySurface` is the compatibility bridge from scalar volatility to
+  the expiry and log-strike-to-forward surface API. Interpolated smile/surface
+  construction is intentionally not included yet.
+- `thegreeklab-visualization` samples a `VolatilitySurface` into an immutable
+  grid and renders it as a JavaFX heatmap. It is an optional consumer of market
+  data, not part of the pricing or calibration path.
 - Invalid inputs fail fast through domain-specific exceptions.
 - Binomial Greeks are finite-difference based and can be sensitive to tree
   depth, bump size and near-zero option values.
